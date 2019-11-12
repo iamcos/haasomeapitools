@@ -15,12 +15,10 @@ import botsellector
 import configserver
 import init
 import interval as iiv
-ip, secret = init.connect()
-haasomeClient = HaasomeClient(ip, secret)
+haasomeClient= init.connect()
 
 
 
-bot, botlist = botsellector.getallmhbots(haasomeClient)
 
 def allenabledmarkets():
 	priceSources = {}
@@ -81,14 +79,19 @@ def get_market_history(priceMarket, ticks):
 						for tick in marketdata:
 							csvwriter.writerow({'timeStamp': str(tick.timeStamp),'unixTimeStamp': str(tick.unixTimeStamp), 'open': float(tick.open), 'highValue':  float(tick.highValue), 'lowValue': float(tick.lowValue),'close' : float(tick.close),'volume': float(tick.volume),'currentBuyValue': str(tick.currentBuyValue),'currentSellValue': float(tick.currentSellValue)})
 							saved +=1
-							print(saved, 'markets has been saved')
+							print(saved, 'ticks has been saved')
 		else:
 			print(historystat.errorCode)
 			historystat = haasomeClient.marketDataApi.get_history_from_market(priceMarket,interval,ticks)
+			time.wait()
 
 
 
 def main():
+	botlist = botsellector.return_all_mh_bots(haasomeClient)
+	bot = botsellector.get_specific_bot(haasomeClient, botlist)
+
+
 	ticks = int(iiv.readinterval(bot))
 	priceMarkets = markets(bot)
 	for priceMarket in priceMarkets:

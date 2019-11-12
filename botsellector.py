@@ -255,7 +255,7 @@ def getallbots(haasomeClient):
         return botnumobj
 
 
-def main():
+def fget_specific_bot():
     pass
-if __name__ == "__main__":
-    main()
+if __name__ == "__fget_specific_bot__":
+    fget_specific_bot()

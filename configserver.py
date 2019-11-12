@@ -115,7 +115,14 @@ def read_bt():
         currentfile = Path(str("bt.ini"))
         currentfile.touch(exist_ok=True)
         set_bt()
-    dd = config["BT"]
+    try:
+        dd = config["BT"]
+        
+    except KeyError:
+        currentfile = Path(str("bt.ini"))
+        currentfile.touch(exist_ok=True)
+        print("bt has been created!")
+
     year = dd.get("year")
     month = dd.get("month")
     day = dd.get("day")

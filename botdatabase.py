@@ -5,7 +5,7 @@ import os
 from io import StringIO
 from pathlib import Path
 import base64, zlib, gzip
-from pastebinapi import PasteBin
+# from pastebinapi import PasteBin
 from haasomeapi.enums.EnumCustomBotType import EnumCustomBotType
 import pickle
 import csv

@@ -1,0 +1,7 @@
+haasomeapi
+ipywidgets
+matplotlib
+pandas
+plotly
+spicy
+jsonpickle

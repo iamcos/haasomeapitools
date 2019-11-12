@@ -23,7 +23,7 @@ from ipywidgets import fixed, interact, interact_manual, interactive
 import botsellector
 import init
 import interval as iiv
-import rotator
+# import rotator
 from botdatabase import BotDB
 
 matplotlib.style.use('ggplot')
@@ -129,9 +129,9 @@ def orders_to_df(bot):
 		orders_df = pd.DataFrame(completedOrders)
 	return orders_df
 
-def backtest_bots(bot):
-	results, bot_object_list  = rotator.backtestingfrommemory(bot, haasomeClient)
-	return bot_object_list
+# def backtest_bots(bot):
+# 	results, bot_object_list  = rotator.backtestingfrommemory(bot, haasomeClient)
+# 	return bot_object_list
 
 
 def combine_orders_with_history(df, orders_df):

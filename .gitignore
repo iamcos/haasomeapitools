@@ -1,2 +1,5 @@
 
 .DS_Store
+.macenv
+.vscode
+__pycache__
