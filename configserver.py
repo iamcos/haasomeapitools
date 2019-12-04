@@ -2,6 +2,7 @@ from __future__ import print_function, unicode_literals
 from haasomeapi.HaasomeClient import HaasomeClient
 from haasomeapi.enums.EnumErrorCode import EnumErrorCode
 from datetime import datetime, date, time, timezone
+from pathlib import Path
 
 
 import configparser

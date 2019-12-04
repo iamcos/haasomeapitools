@@ -174,6 +174,8 @@ class BotDB:
             unfreeze = jsonpickle.decode(bot)
             return unfreeze
     
+
+
     def create_new_custom_bot(newbot, example_bot):
         new = haasomeClient.customBotApi.new_custom_bot(
             example_bot.accountId,
@@ -188,9 +190,35 @@ class BotDB:
         # print(new.result)
         # newr = new.result
         # print(newr)
-        BotDB.set_safety_parameters(new.result, example_bot)
+        # BotDB.set_safety_parameters(new.result, example_bot)
         return new.result
         
+
+    def setup_mad_hatter_bot(current_bot, haasomeClient):
+        botname = str(current_bot.priceMarket.primaryCurrency) + str(' / ') + \
+                    str(current_bot.priceMarket.secondaryCurrency) + str(' Roi ') + str(current_bot.roi)
+        setup_bot = haasomeClient.customBotApi.setup_mad_hatter_bot(
+        botName = current_bot.name,
+        botGuid=current_bot.guid,
+        accountGuid=current_bot.accountId,
+        primaryCoin=current_bot.priceMarket.primaryCurrency,
+        secondaryCoin=current_bot.priceMarket.secondaryCurrency,
+        contractName=current_bot.priceMarket.contractName,
+        leverage=current_bot.leverage,
+        templateGuid=current_bot.customTemplate,
+        position=current_bot.coinPosition,
+        fee=current_bot.currentFeePercentage,
+        tradeAmountType=current_bot.amountType,
+        tradeAmount=current_bot.currentTradeAmount,
+        useconsensus=current_bot.useTwoSignals,
+        disableAfterStopLoss=current_bot.disableAfterStopLoss,
+        interval=current_bot.interval,
+        includeIncompleteInterval=current_bot.includeIncompleteInterval,
+        mappedBuySignal=current_bot.mappedBuySignal,
+        mappedSellSignal=current_bot.mappedSellSignal,).result
+        print(current_bot.name,' Has been configured')
+        return setup_bot.result
+
     def create_new_trade_bot(newbot, example_bot):
         new = haasomeClient.tradeBotApi.new_trade_bot(
             example_bot.accountId,
