@@ -1,5 +1,8 @@
 # haasomeapitools
 
+
+
+
 botinterface contains a class that can be imported to any pythong script and enable basic HaasAPI integration.
 
 Scripts to interact with Haasomeapi via the python wrapper
