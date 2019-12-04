@@ -18,20 +18,6 @@ import json
 import sqlite3 as db
 
 """
-BotInterface allows for easy access and manipulation of HaasomeAPI protocols:
-	Get:
-		all bots
-		all markets
-	Retrieve :
-		market object with pricesource, primary coin and secondary coin parameters.
-		Custom Bot Object by guid
-	Prepare:
-		Price-tick data
-
-	Some functions have multipe outputs, even suitable for Dash by plotly.
-
-	Save and load current data state to disk.
-	Store and load market data to CSV
 
 """
 
@@ -53,7 +39,7 @@ class BotInterface:
 
 	def get_custombots(self):
 		bots = [[i.name, i, i.guid, i.roi] for i in self.connect.customBotApi.get_all_custom_bots().result]
-
+		# print(bots)
 
 		bots3 = [[i.name,jsonpickle.encode(i)]
 			for i in self.connect.customBotApi.get_all_custom_bots().result]
@@ -69,7 +55,7 @@ class BotInterface:
 		print('guid',guid)
 		bot = [i for i in
 			 self.connect.customBotApi.get_all_custom_bots().result if i.guid == guid]
-
+		# print(bot)
 		return bot[0]
 
 
@@ -143,7 +129,7 @@ class BotInterface:
 				priceMarketObject, interval, depth)
 			sleep(5)
 			print(marketdata.errorCode, marketdata.errorMessage)
-
+			# print(marketdata.errorCode, marketdata.errorMessage,marketdata.result))
 			print(f'working on market history, for {priceMarketObject.primaryCurrency}{priceMarketObject.secondaryCurrency}with interval {interval} for {depth} depth')
 			while marketdata.errorCode.value != 'SUCCESS' and marketdata.errorCode.value != 'PRICE_MARKET_IS_SYNCING' and depth > 0:
 				print(marketdata.errorCode, marketdata.errorMessage)
@@ -156,10 +142,28 @@ class BotInterface:
 					print('history is ', len(marketdata.result),' long')
 
 					df = self.to_df_for_ta(marketdata.result)
+					print(df)
 					return df
-				return df
+				# return df
 				break
+					# df=pd.read_json(jsonpickle.encode(marketdata.result))
 
+					# df["date"] = pd.to_datetime(df["unixTimeStamp"], unit="s")
+
+					# df = df.drop(
+					# 	columns=[
+					# 		"currentBuyValue",
+					# 		"currentSellValue","py/object",
+					# 		"unixTimeStamp", 'timeStamp',
+					# 	]
+					# )
+					# df['day'] = pd.DatetimeIndex(df['date']).day
+					# df['hour'] = pd.DatetimeIndex(df['date']).hour
+					# df['year'] = pd.DatetimeIndex(df['date']).year
+					# print(df)
+					# print('daaa', df['year'].tail(100))
+					# print('daaa', df['day'].unique())
+					# return jsonpickle.encode(df)
 
 
 
@@ -233,16 +237,12 @@ class BotInterface:
 		df = pd.DataFrame(market_data)
 		return df
 
-	def df_to_csv(df, bot):
+	def df_to_csv(self,df, marketobj):
 
-		#Save Dataframe to CSV
-		ticks = int(iiv.int(bot))
 		filename = (
-			str(bot.priceMarket.primaryCurrency)
+			str(marketobj.primaryCurrency)
 			+ "\\"
-			+ str(bot.priceMarket.secondaryCurrency)
-			+ " "
-			+ str(ticks)
+			+ str(marketobj.secondaryCurrency)
 			+ ".csv"
 		)
 		df.to_csv(filename)
@@ -274,13 +274,40 @@ class BotInterface:
 		# print(cb[0][1])
 		return bots, df, bot_dict, bots2
 
+	def save_market_history_to_csv(self, market, primarycoin, secondarycoin, interval, depth):
+		'''
+		Save to csv market history of given depth (ticks) in a given interval(candle interval), for market being 'BINANCE'/'DERBIT' and so on, for primarycoin('BTC'), secondarycoin ('ETH').
+		to initialize this command, we first create an instance of BotInterface class as:
+		haas = BotInterface()
+		Follwowing the creation comes save to csv file command:
+		haas.save_market_historu_to_csv()
+		Inside the ()at the end of this command  are written our variables: 'BINANCE', 'BTC','USDT' for market and coin pair, 15 is candle interval and 1000 - ticks. So we should end up with a file containing 1000 candles of 15 minutes each with all the data Haasapi is capable of providing.
+		This file can then be used in other applications like plotting, analyzing, applying technical indicators to, machine learning and so forth.
+		'''
+			marketobj = self.return_priceMarket_object(self.markets,market, primarycoin, secondarycoin)
+			market_history = self.get_market_data(marketobj, interval, depth)
+			self.df_to_csv(market_history, marketobj)
+			return market_history
 
 def main():
 	try:
+		haas = BotInterface()
+		haas.save_market_history_to_csv('BINANCE', 'BTC', 'USDT', 15, 1000)
+		# print(con.markets)
+		# for i in con.markets:
+		# print(i)
+		# mo = con.return_priceMarket_object(con.markets, "BINANCE", "BTC", "USDT")
+		# print(mo)
+		# market_data = con.get_market_data(mo)
+		# bot = con.return_customBot_object('0cf0a9d7-e719-4f17-9704-adc05456b036')
+		# print(bot.priceMarket.priceSource)
+		# print(more)
 
-		con=BotInterface()
-
-
+		# print(data)
+		# print(b['priceSource']())
+		# print()
+		# for i in list(b.keys())[:3]:
+		#     print(b[i])
 	except KeyboardInterrupt:
 		print("Interrupted")
 		try:
