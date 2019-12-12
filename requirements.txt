@@ -6,3 +6,5 @@ plotly
 spicy
 jsonpickle
 sqlalchemy
+grequests
+aiohttp

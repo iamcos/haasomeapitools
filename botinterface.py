@@ -417,16 +417,16 @@ def main():
 		df = jsonpickle.decode(d.text)
 		# for x in df:
 		# help(df)
-		print(pd.to_json(df))
-		# df2 = pd.DataFrame(df1)
-		df2.reindex
+		# print(pd.to_json(df))
+		df2 = pd.DataFrame(df)
+		# df2.reindex
 		# print(df2)
 		for x, y in df.items():
 			df = x
 		hey = df2['Data'].to_dict()
-		df3 = pd.read_dict((hey))
-		na = pd.melt(df3)
-		print(na)
+		# df3 = pd.read_dict((hey))
+		# na = pd.melt(df3)
+		print(hey)
 
 
 
