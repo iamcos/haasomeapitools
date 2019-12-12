@@ -5,3 +5,4 @@ pandas
 plotly
 spicy
 jsonpickle
+sqlalchemy

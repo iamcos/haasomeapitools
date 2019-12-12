@@ -3,3 +3,6 @@
 .macenv
 .vscode
 __pycache__
+*.csv
+*.ini
+*.db

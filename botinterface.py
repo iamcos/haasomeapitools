@@ -9,18 +9,25 @@ from haasomeapi.dataobjects.custombots.BaseCustomBot import BaseCustomBot
 import pandas as pd
 from haasomeapi.apis.AccountDataApi import AccountDataApi
 import configserver
-import init
 from time import sleep
 import jsonpickle
 from botdatabase import BotDB
 from sqlalchemy import create_engine
 import json
-import sqlite3 as db
 
-"""
-
-"""
-
+import sqlite3 as sqllite
+from datetime import datetime
+from multiprocessing import Lock, Process, Queue, current_process
+import queue
+from multiprocessing.dummy import Pool
+import grequests
+import requests
+import asyncio
+import time
+from typing import Any, Iterable, List, Tuple, Callable
+import os
+import aiohttp
+import requests
 
 class BotInterface:
 	def __init__(self):
@@ -30,9 +37,10 @@ class BotInterface:
 		)
 		self.markets = self.get_all_markets()
 		self.selectedbot = None
-		self.depth = 0
+		self.depth = 1000
 		self.interval = 1
-		self.db = db.connect(":memory:")
+		self.sqllite_memory = sqllite.connect(":memory:")
+		self.sqllite = sqllite.connect("market.db")
 		self.custombots = self.get_custombots()
 		self.tradebots = self.get_tradebots()
 		self.enabledaccounts = self.get_enabled_accounts()
@@ -51,7 +59,7 @@ class BotInterface:
 		print(df)
 		return bots, df, bots2,bots3
 
-	def return_customBot_object(self,guid):
+	def return_customBot_object_by_guid(self,guid):
 		print('guid',guid)
 		bot = [i for i in
 			 self.connect.customBotApi.get_all_custom_bots().result if i.guid == guid]
@@ -121,7 +129,26 @@ class BotInterface:
 
 		return obj[0][3]
 
+	def execute_price_api_request(self,pricesource, primarycoin, secondarycoin):
+		request_url = f'http://price-api.haasonline.com/PriceAPI.php?channel=LASTMINUTETICKS_{pricesource}_{primarycoin}_{secondarycoin}_'
 
+		markets = self.get_pricemarkets_for_market(pricesource, primarycoin, secondarycoin)
+		for row in markets.iterrows():
+			url = f'http://price-api.haasonline.com/PriceAPI.php?channel=LASTMINUTETICKS_{pricesource}_{primarycoin}_{secondarycoin}_'
+			with requests.Session() as s:
+				resp = s.get(url)
+
+				return resp
+
+	def download_all(urls: Iterable[str]) -> List[Tuple[str, bytes]]:
+		def download(url: str) -> Tuple[str, bytes]:
+			print(f"Start downloading {url}")
+			with requests.Session() as s:
+				resp = s.get(url)
+				out= image_name_from_url(url), resp.content
+			print(f"Done downloading {url}")
+			return out
+		return [download(url) for url in urls]
 
 	def get_market_data(self,priceMarketObject, interval, depth):
 			count = 0
@@ -131,12 +158,15 @@ class BotInterface:
 			print(marketdata.errorCode, marketdata.errorMessage)
 			# print(marketdata.errorCode, marketdata.errorMessage,marketdata.result))
 			print(f'working on market history, for {priceMarketObject.primaryCurrency}{priceMarketObject.secondaryCurrency}with interval {interval} for {depth} depth')
-			while marketdata.errorCode.value != 'SUCCESS' and marketdata.errorCode.value != 'PRICE_MARKET_IS_SYNCING' and depth > 0:
-				print(marketdata.errorCode, marketdata.errorMessage)
+			while marketdata.errorCode.value == EnumErrorCode.PRICE_MARKET_IS_SYNCING and depth > 0:
+				print(marketdata.errorCode.value, marketdata.errorMessage)
 				sleep(5)
-
 				marketdata = self.connect.marketDataApi.get_history_from_market(
 				priceMarketObject, interval, depth)
+			else:
+				print(marketdata.errorCode)
+
+			while marketdata.errorCode == EnumErrorCode.SUCCESS:
 
 				if len(marketdata.result) >0 :
 					print('history is ', len(marketdata.result),' long')
@@ -144,27 +174,8 @@ class BotInterface:
 					df = self.to_df_for_ta(marketdata.result)
 					print(df)
 					return df
-				# return df
-				break
-					# df=pd.read_json(jsonpickle.encode(marketdata.result))
-
-					# df["date"] = pd.to_datetime(df["unixTimeStamp"], unit="s")
-
-					# df = df.drop(
-					# 	columns=[
-					# 		"currentBuyValue",
-					# 		"currentSellValue","py/object",
-					# 		"unixTimeStamp", 'timeStamp',
-					# 	]
-					# )
-					# df['day'] = pd.DatetimeIndex(df['date']).day
-					# df['hour'] = pd.DatetimeIndex(df['date']).hour
-					# df['year'] = pd.DatetimeIndex(df['date']).year
-					# print(df)
-					# print('daaa', df['year'].tail(100))
-					# print('daaa', df['day'].unique())
-					# return jsonpickle.encode(df)
-
+			else:
+				print(marketdata.errorCode)
 
 
 
@@ -222,6 +233,7 @@ class BotInterface:
 
 		market_data = [
 			{
+
 				"date": x.timeStamp,
 				"open": x.open,
 				"high": x.highValue,
@@ -237,18 +249,15 @@ class BotInterface:
 		df = pd.DataFrame(market_data)
 		return df
 
-	def df_to_csv(self,df, marketobj):
+	def df_to_csv(self,df, marketobj,interval):
 
-		filename = (
-			str(marketobj.primaryCurrency)
-			+ "\\"
-			+ str(marketobj.secondaryCurrency)
-			+ ".csv"
-		)
-		df.to_csv(filename)
+		filename = f'{EnumPriceSource(marketobj.priceSource).name},{marketobj.primaryCurrency},{marketobj.secondaryCurrency},{interval}.csv'
+
+		df.to_csv(filename, index_label= 'index')
 		print("Market History Sucessfuly Saved to CSV")
 
 	def csv_to_df(filename):
+
 		data = pd.read_csv(filename)
 
 		return data
@@ -265,7 +274,7 @@ class BotInterface:
 			{i.name: i} for i in self.connect.tradeBotApi.get_all_trade_bots().result
 		]
 		bot_dict = [{"id": i, "label": b[0], "value": b[1]}
-                    for i, b in enumerate(bots)]
+					for i, b in enumerate(bots)]
 
 		df = pd.DataFrame(bots, columns=(["name", "guid", "obj"]))
 		# print(f'\Trade Bots:\n {df}[1]')
@@ -273,6 +282,104 @@ class BotInterface:
 		# print(df.completedOrders)
 		# print(cb[0][1])
 		return bots, df, bot_dict, bots2
+
+	def save_market_history_to_database(self, market, primarycoin, secondarycoin, interval, depth):
+		marketobj = self.return_priceMarket_object(self.markets, market, primarycoin, secondarycoin)
+		market_history = self.get_market_data(marketobj, interval, depth)
+
+		db_name = 'market.db'
+		engine = create_engine("sqlite:///%s" % db_name,
+							   execution_options={"sqlite_raw_colnames": True})
+		table_name = f'{EnumPriceSource(marketobj.priceSource).name},{marketobj.primaryCurrency},{marketobj.secondaryCurrency},{interval}'
+		# market_history.to_csv(f'{table_name}.csv')
+		market_history.to_sql(
+			table_name, con=engine, if_exists='append')
+		return market_history
+
+	def get_market_history_from_database(self, market, primarycoin, secondarycoin,interval):
+		marketobj = self.return_priceMarket_object(
+			self.markets, market, primarycoin, secondarycoin)
+		db_name = 'market.db'
+		table_name = f'{EnumPriceSource(marketobj.priceSource).name},{marketobj.primaryCurrency},{marketobj.secondaryCurrency}'
+		engine = create_engine("sqlite:///%s" % db_name,execution_options={"sqlite_raw_colnames": True})
+		market_history = pd.read_sql_table(table_name,engine)
+		# print(market_history)
+		return market_history
+
+	def update_market_history_csv(self, market, primarycoin, secondarycoin, interval, depth):
+		marketobj = self.return_priceMarket_object(
+			self.markets, market, primarycoin, secondarycoin)
+		filename = f'{EnumPriceSource(marketobj.priceSource).name},{marketobj.primaryCurrency},{marketobj.secondaryCurrency},{interval}.csv'
+		print(filename)
+		ta = pd.read_csv(filename)
+		last = ta.iat[-1, 1]
+		last = pd.to_datetime(last)
+		print(last)
+
+
+		calculated_interval = pd.to_datetime(
+			ta.iat[-1, 1]) - pd.to_datetime(ta.iat[-2, 1])
+		calculated_interval = int(calculated_interval.total_seconds() /60/interval)
+		time_with_no_history = datetime.now() - last
+		time_with_no_history = time_with_no_history.total_seconds()/60/interval
+		print(time_with_no_history)
+		print(f'{last} - {datetime.now()} = {time_with_no_history}')
+
+
+		# print(calculated_interval)
+
+		print(f' There is no history in database for {time_with_no_history} since last record.')
+		ticks_to_get = time_with_no_history/calculated_interval
+		# print(ticks_to_get)
+		missing_data = self.get_market_data(marketobj, interval, int(time_with_no_history))
+		# print(missing_data)
+
+		ta2 = pd.merge_ordered(ta, missing_data, left_by='date')
+		# print(ta2)
+		ta2.to_csv(filename)
+
+	def get_pricemarkets_for_market(self, market, primarycoin=None, secondarycoin=None):
+
+		df = self.markets
+		if primarycoin == None and secondarycoin == None:
+
+			obj = df[df["pricesource"] == market]
+		elif primarycoin != None:
+			obj = df[df["pricesource"] == market][df["primarycurrency"]
+											  == primarycoin]
+		elif secondarycoin != None:
+			obj = df[df["pricesource"] == market][df["secondarycurrency"] == secondarycoin]
+
+		return obj
+		# print(obj)
+
+	def dl_history_for_markets(self, obj, interval, depth, primarycoin=None, secondarycoin=None):
+
+			for row in obj.iterrows():
+				print(row[1]['pricesource'], row[1]
+					['primarycurrency'], row[1]['secondarycurrency'])
+				marketobj = self.return_priceMarket_object(
+								self.markets, row[1]['pricesource'], row[1]['primarycurrency'], row[1]['secondarycurrency'])
+				market_data = self.get_market_data(marketobj, 30, 50)
+
+				db_name = 'ta.db'
+				engine = create_engine("sqlite:///%s" % db_name,
+									execution_options={"sqlite_raw_colnames": True})
+				table_name = f'{EnumPriceSource(marketobj.priceSource).name},{marketobj.primaryCurrency},{marketobj.secondaryCurrency},{interval}'
+				# market_history.to_csv(f'{table_name}.csv')
+				try:
+					market_data.to_sql(table_name, con=engine, if_exists='append')
+				except AttributeError:
+					pass
+
+
+
+		# # # print(dict.keys())
+		# nxt = next(obj.iterrows())[1]
+		# print(nxt)
+
+		# print(ticks_to_get)
+
 
 	def save_market_history_to_csv(self, market, primarycoin, secondarycoin, interval, depth):
 		'''
@@ -284,15 +391,60 @@ class BotInterface:
 		Inside the ()at the end of this command  are written our variables: 'BINANCE', 'BTC','USDT' for market and coin pair, 15 is candle interval and 1000 - ticks. So we should end up with a file containing 1000 candles of 15 minutes each with all the data Haasapi is capable of providing.
 		This file can then be used in other applications like plotting, analyzing, applying technical indicators to, machine learning and so forth.
 		'''
-			marketobj = self.return_priceMarket_object(self.markets,market, primarycoin, secondarycoin)
-			market_history = self.get_market_data(marketobj, interval, depth)
-			self.df_to_csv(market_history, marketobj)
-			return market_history
+		marketobj = self.return_priceMarket_object(self.markets,market, primarycoin, secondarycoin)
+		market_history = self.get_market_data(marketobj, interval, depth)
+		self.df_to_csv(market_history, marketobj,interval)
+		return market_history
+
+
 
 def main():
 	try:
 		haas = BotInterface()
-		haas.save_market_history_to_csv('BINANCE', 'BTC', 'USDT', 15, 1000)
+		# haas.save_market_history_to_csv('BINANCE', 'BTC', 'USDT', 1, 100)
+		# haas.save_market_history_to_database('BINANCE', 'BTC', 'USDT', 15, 1000)
+		# td = haas.get_market_history_from_database('BINANCE', .'BTC', 'USDT',15)
+
+		market = 'BINANCE'
+		primarycoin = 'BTC'
+		secondarycoin = 'USDT'
+		d = haas.execute_price_api_request(market, primarycoin, secondarycoin)
+
+		# print(d.text)
+		# for v in d.content:
+		# 	# print(k)
+		# 	print(v)
+		df = jsonpickle.decode(d.text)
+		# for x in df:
+		# help(df)
+		print(pd.to_json(df))
+		# df2 = pd.DataFrame(df1)
+		df2.reindex
+		# print(df2)
+		for x, y in df.items():
+			df = x
+		hey = df2['Data'].to_dict()
+		df3 = pd.read_dict((hey))
+		na = pd.melt(df3)
+		print(na)
+
+
+
+		# result = await co_mp_apply(haaas.get_multimarket_data(market, args=(market, 5, 100, 'BTC'))
+
+		# task = background_task(haas.get_multimarket_data)(market, 5, 100, 'BTC')
+		# wait_completed(taskn
+		# result = a1.run(haas.get_multimarket_data(15))
+		# haas.get_multimarket_data(market, 5, 100, secondarycoin=secondarycoin)
+		# marketobj = haas.return_priceMarket_object(
+		#             haas.markets, market, primaryco,in, secondarycoin)
+		# filename = f'{EnumPriceSource(marketobj.priceSource).name},{marketobj.primaryCurrency},{marketobj.secondaryCurrency}.csv'
+		# td.to_csv(filename)
+		# haas.update_market_history_csv(
+		# 	market, primarycoin, secondarycoin, 1, 100)
+		# ta = pd.read_csv(filename)
+		# interval = pd.to_datetime(ta.iat[-1, 2])- pd.to_datetime(ta.iat[-2, 2])
+		# print(pd.to_datetime(ta.iat[-1, 2]), pd.to_datetime(ta.iat[-2, 2]),interval.total_seconds()/60)
 		# print(con.markets)
 		# for i in con.markets:
 		# print(i)
