@@ -4,6 +4,7 @@ import configserver
 import init
 import re
 
+
 def getallcustombots(haasomeClient):
     #returns all custom bots in a list
     allbots = haasomeClient.customBotApi.get_all_custom_bots().result
@@ -59,10 +60,10 @@ def get_specific_bot(haasomeClient,botlist):
         )
     finally:
         botnumobj = botlist[int(botnum)]
-   
+
     print("Bot ", botnumobj.name + " is selected!")
     return botnumobj
-    
+
 def get_mh_bot(haasomeClient):
     #Gets all Mad-Hatter bots and returns one in a single function
     all_mh_bots = return_all_mh_bots(haasomeClient)

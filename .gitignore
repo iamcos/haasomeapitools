@@ -114,3 +114,8 @@ venv.bak/
 .idea/
 .patch
 .DS_Store
+*.haasbots
+Mad_hatter_rotator.py
+pp.json
+config.ini
+config.ini

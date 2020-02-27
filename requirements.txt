@@ -8,3 +8,6 @@ jsonpickle
 sqlalchemy
 grequests
 aiohttp
+poetry
+click
+fire

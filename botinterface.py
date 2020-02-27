@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from haasomeapi.apis.MarketDataApi import MarketDataApi
 from haasomeapi.apis.ApiBase import ApiBase
 from haasomeapi.enums.EnumPriceSource import EnumPriceSource
@@ -29,6 +30,15 @@ import os
 import aiohttp
 import requests
 
+
+from botdatabase import BotDB
+
+from prompt_toolkit import prompt
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit import print_formatted_text as print
+from haasomeapi.enums.EnumCustomBotType import EnumCustomBotType
+
 class BotInterface:
 	def __init__(self):
 		self.connection_string = configserver.validateserverdata()
@@ -43,7 +53,9 @@ class BotInterface:
 		self.sqllite = sqllite.connect("market.db")
 		self.custombots = self.get_custombots()
 		self.tradebots = self.get_tradebots()
+		self.pingpongbots = self.get_pp_bots()
 		self.enabledaccounts = self.get_enabled_accounts()
+		self.prompt = PromptSession()
 
 	def get_custombots(self):
 		bots = [[i.name, i, i.guid, i.roi] for i in self.connect.customBotApi.get_all_custom_bots().result]
@@ -57,7 +69,26 @@ class BotInterface:
 		]
 		df = pd.DataFrame(bots, columns=(["name", "obj", "guid", "roi"]))
 		print(df)
-		return bots, df, bots2,bots3
+		return bots, df, bots2, bots3
+
+
+	def return_bots_of_type(self):
+		bots = self.get_custombots
+		types = []
+		session = PromptSession()
+		for bottype in EnumCustomBotType:
+			types.append(bottype.name)
+		types_completer = WordCompleter(types)
+		print(f'Therea re {[type for type in types]}')
+		selected_bot_type = session.prompt('Enter BotType first letters: ', completer=types_completer)
+		bots_of_type = []
+		for bot in bots:
+			if EnumCustomBotType(bot.botType).name == f'{selected_bot_type}':
+				bots_of_type.append(bot)
+
+		print(bots_of_type)
+		return bots_of_type
+
 
 	def return_customBot_object_by_guid(self,guid):
 		print('guid',guid)
@@ -110,7 +141,42 @@ class BotInterface:
 					 "secondarycurrency", "obj"]),
 		)
 		return df
+	def get_pp_bots(self):
+		bots = [[i.name, i, i.guid, i.roi] for i in self.connect.customBotApi.get_all_custom_bots().result if i.botType == 2]
 
+		# print(bots)
+
+		bots3 = [[i.name,jsonpickle.encode(i)]
+			for i in self.connect.customBotApi.get_all_custom_bots().result if i.botType == 2]
+		bots2 = [
+			{"name": i.name, "bot": i, "guid": i.guid}
+			for i in self.connect.customBotApi.get_all_custom_bots().result if i.botType == 2
+		]
+		df = pd.DataFrame(bots, columns=(["name", "obj", "guid", "roi"]))
+		# print(df)
+		return bots, df, bots2, bots3
+
+	def get_mh_bots(self):
+		bots = [[i.name, i, i.guid, i.roi]
+                    for i in self.connect.customBotApi.get_all_custom_bots().result if i.botType == 15]
+
+		# print(bots)
+
+		bots3 = [[i.name, jsonpickle.encode(i)]
+                    for i in self.connect.customBotApi.get_all_custom_bots().result if i.botType == 15]
+		bots2 = [
+			{"name": i.name, "bot": i, "guid": i.guid}
+			for i in self.connect.customBotApi.get_all_custom_bots().result if i.botType == 15
+		]
+		df = pd.DataFrame(bots, columns=(["name", "obj", "guid", "roi"]))
+		# print(df)
+		return bots, df, bots2, bots3
+
+	def setup_ping_pong_bot(self,bot):
+		bot = self.connect.customBotApi.setup_ping_pong_bot(bot.accountId, bot.guid, bot.name, bot.priceMarket.primaryCurrency, bot.priceMarket.secondaryCurrency, bot.customTemplate,
+		                                                    bot.priceMarket.contractName, bot.leverage, bot.amountType, bot.currentTradeAmount, bot.coinPosition, bot.currentFeePercentage)
+		print(bot.errorCode, bot.errorMessage)
+		return bot.result
 	def get_allbots(self):
 		all_bots = []
 		for bot in self.custombots:
@@ -129,26 +195,63 @@ class BotInterface:
 
 		return obj[0][3]
 
-	def execute_price_api_request(self,pricesource, primarycoin, secondarycoin):
+	def get_last_ticks(self,pricesource, primarycoin, secondarycoin):
+
+		'''
+		Get price history in 1 tick intervals from now to 1400
+		'''
 		request_url = f'http://price-api.haasonline.com/PriceAPI.php?channel=LASTMINUTETICKS_{pricesource}_{primarycoin}_{secondarycoin}_'
 
 		markets = self.get_pricemarkets_for_market(pricesource, primarycoin, secondarycoin)
 		for row in markets.iterrows():
 			url = f'http://price-api.haasonline.com/PriceAPI.php?channel=LASTMINUTETICKS_{pricesource}_{primarycoin}_{secondarycoin}_'
-			with requests.Session() as s:
+			with requests.sessions.Session() as s:
+				resp = s.get(url)
+
+				return resp
+	def get_ticks(self,pricesource, primarycoin, secondarycoin,interval,tickstype):
+
+		'''
+		Get price history in required tick intervals
+		tickstype can be LASTTICKS or DEEPTICKS
+		'''
+
+		url = f'https://hcdn.haasonline.com/PriceAPI.php?channel={tickstype}&market={pricesource}_{primarycoin}_{secondarycoin}_&interval={interval}'
+
+		markets = self.get_pricemarkets_for_market(pricesource, primarycoin, secondarycoin)
+		for row in markets.iterrows():
+			with requests.sessions.Session() as s:
 				resp = s.get(url)
 
 				return resp
 
-	def download_all(urls: Iterable[str]) -> List[Tuple[str, bytes]]:
-		def download(url: str) -> Tuple[str, bytes]:
-			print(f"Start downloading {url}")
-			with requests.Session() as s:
-				resp = s.get(url)
-				out= image_name_from_url(url), resp.content
-			print(f"Done downloading {url}")
-			return out
-		return [download(url) for url in urls]
+	def save_all_markets_history_to_db(self):
+			'''
+			Downloads all the market history for every enabled market
+			'''
+			total_markets = len(self.markets)
+			for market in self.markets.iterrows():
+				print(f'YO {market[1]["obj"]}')
+				market_history = self.get_last_ticks(EnumPriceSource(
+					market[1]["obj"].priceSource).name, market[1]["obj"].primaryCurrency, market[1]["obj"].secondaryCurrency)
+
+				# print(market_history.content.decode('utf-8'))
+				data_dict = market_history.json().get('Data')
+				index = []
+				# print(data_dict)
+				# df = pd.DataFrame(market_history.json().get('Data'))
+				for d in data_dict:
+					index.append(pd.to_datetime(d['T'], unit='s'))
+				# dti = pd.DatetimeIndex(index)
+
+				df = pd.DataFrame(data_dict, index = index)
+				# df.T = pd.to_datetime(df['T'], unit='s')
+
+
+				total_markets -= 1
+				self.save_market_history_to_db(market[1]["obj"], df)
+				print(df)
+				print(f'There are {total_markets} left to download')
 
 	def get_market_data(self,priceMarketObject, interval, depth):
 			count = 0
@@ -282,8 +385,19 @@ class BotInterface:
 		# print(df.completedOrders)
 		# print(cb[0][1])
 		return bots, df, bot_dict, bots2
+	def save_market_history_to_db(self, market, market_history):
+		db_name = 'market.db'
+		engine = create_engine("sqlite:///%s" % db_name,
+                         execution_options={"sqlite_raw_colnames": True})
+		table_name = f'{EnumPriceSource(market.priceSource).name},{market.primaryCurrency},{market.secondaryCurrency}'
+		# market_history.to_csv(f'{table_name}.csv')
+		try:
+			market_history.to_sql(
+			table_name, con=engine, if_exists='replace')
+		except Exception as e:
+			print(f'SQL error: {e}')
 
-	def save_market_history_to_database(self, market, primarycoin, secondarycoin, interval, depth):
+	def get_market_data_and_save_to_db(self, market, primarycoin, secondarycoin, interval, depth):
 		marketobj = self.return_priceMarket_object(self.markets, market, primarycoin, secondarycoin)
 		market_history = self.get_market_data(marketobj, interval, depth)
 
@@ -296,7 +410,7 @@ class BotInterface:
 			table_name, con=engine, if_exists='append')
 		return market_history
 
-	def get_market_history_from_database(self, market, primarycoin, secondarycoin,interval):
+	def get_market_history_from_database(self, market, primarycoin, secondarycoin):
 		marketobj = self.return_priceMarket_object(
 			self.markets, market, primarycoin, secondarycoin)
 		db_name = 'market.db'
@@ -349,9 +463,9 @@ class BotInterface:
 											  == primarycoin]
 		elif secondarycoin != None:
 			obj = df[df["pricesource"] == market][df["secondarycurrency"] == secondarycoin]
-
+		print(obj)
 		return obj
-		# print(obj)
+
 
 	def dl_history_for_markets(self, obj, interval, depth, primarycoin=None, secondarycoin=None):
 
@@ -402,31 +516,35 @@ def main():
 	try:
 		haas = BotInterface()
 		# haas.save_market_history_to_csv('BINANCE', 'BTC', 'USDT', 1, 100)
-		# haas.save_market_history_to_database('BINANCE', 'BTC', 'USDT', 15, 1000)
+		# haas.get_market_data_and_save_to_db('BINANCE', 'BTC', 'USDT', 15, 1000)
 		# td = haas.get_market_history_from_database('BINANCE', .'BTC', 'USDT',15)
 
 		market = 'BINANCE'
 		primarycoin = 'BTC'
 		secondarycoin = 'USDT'
-		d = haas.execute_price_api_request(market, primarycoin, secondarycoin)
+		# pp_bot = haas.pingpongbots
+		# print(pp_bot[0][0][1])
+		# haas.setup_ping_pong_bot(pp_bot[0][0][1])
+		haas.save_all_markets_history_to_db()
+		# d = haas.get_last_ticks(market, primarycoin, secondarycoin)
 
 		# print(d.text)
 		# for v in d.content:
 		# 	# print(k)
 		# 	print(v)
-		df = jsonpickle.decode(d.text)
+		# df = jsonpickle.decode(d.text)
 		# for x in df:
 		# help(df)
 		# print(pd.to_json(df))
-		df2 = pd.DataFrame(df)
+		# df2 = pd.DataFrame(df)
 		# df2.reindex
 		# print(df2)
-		for x, y in df.items():
-			df = x
-		hey = df2['Data'].to_dict()
+		# for x, y in df.items():
+		# 	df = x
+		# hey = df2['Data'].to_dict()
 		# df3 = pd.read_dict((hey))
 		# na = pd.melt(df3)
-		print(hey)
+		# print(hey)
 
 
 
