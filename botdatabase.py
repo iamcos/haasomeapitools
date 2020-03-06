@@ -12,11 +12,14 @@ import csv
 import interval as iiv
 import jsonpickle
 import datetime
+import pandas as pd
+from haasomeapi.enums.EnumErrorCode import EnumErrorCode
 
 import time
 from haasomeapi.enums.EnumPriceSource import EnumPriceSource
 from haasomeapi.HaasomeClient import HaasomeClient
 from haasomeapi.enums.EnumMadHatterSafeties import EnumMadHatterSafeties
+from haasomeapi.enums.EnumMadHatterIndicators import EnumMadHatterIndicators
 
 ip, secret = configserver.validateserverdata()
 haasomeClient = HaasomeClient(ip, secret)
@@ -30,7 +33,7 @@ class BotDB:
         self.local_path = './'
         self.last_created_bot = None
 
-    def return_botlist_files(self):
+    def get_haasbots_file(self):
         #Returns bot-containing list of files from home folder
         files = []
         for file in os.listdir('./'):
@@ -41,6 +44,29 @@ class BotDB:
         userinput = input('Type file number to select it:  ')
         self.db_file = files[int(userinput)]
         return files[int(userinput)]
+    def get_csv_file(self):
+        files =[]
+        for file in os.listdir('./'):
+            if file.endswith(".csv"):
+                files.append(os.path.join('./', file))
+        for i, file in enumerate(files):
+            print(i, file)
+        userinput = input('Type file number to select it:  ')
+        self.db_file = files[int(userinput)]
+        return files[int(userinput)]
+
+    def load_bots_from_file(self, file):
+        db_file = self.get_haasbots_file()
+        print(f'{db_file} db_file')
+        # print(botlistfile)
+        configs = self.load_botlist(db_file)
+        return configs
+
+    def get_configs_from_file(self):
+        file = self.get_haasbots_file()
+        configs = self.load_bots_from_file(file)
+        return configs
+
 
     def return_single_bot_files(self):
         #returns filepath to user specified file from the above list
@@ -94,6 +120,7 @@ class BotDB:
         currentfile.touch(exist_ok=True)
 
         for bot in botlist:
+            print(bot)
             frozenbotlist.append(jsonpickle.encode(bot))
 
 
@@ -295,15 +322,212 @@ class BotDB:
             print(
                 "All Bots have been sucessfully saved to a file in same folder as this app."
             )
-    def strings_to_bots(selected_bots):
-        bots = []
-        print(len(selected_bots),' bots are selected')
-        for i in selected_bots:
-            ii = jsonpickle.decode(i)
-            bots.append(ii)
 
 
+    def iterate_df_configs(self):
+        botlist = botsellector.return_all_mh_bots(haasomeClient)
+        bot = botsellector.get_specific_bot(haasomeClient, botlist)
+        configs = self.csv_to_dataframe()
+        configs.drop(columns=['pricesource','primarycoin','secondarycoin'])
+        results = self.setup(bot, configs)
 
+    def select_config(self, configs):
+
+        print(configs)
+        userinput = input('Please specify the bot number you wish to')
+
+    def setup(self, bot,configs):
+
+        for ind in configs.index:
+            print(ind)
+
+            if bot.bBands["Length"] != configs['bbl'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                0,
+                configs['bbl'][ind]
+            )
+            try:
+                if do.errorCode != EnumErrorCode.SUCCESS:
+                    # pass
+                    print(do.erro/rCode, do.errorMessage, 'Length')
+            except:
+                pass
+            if bot.bBands["Devup"] != configs['devup'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.BBANDS,
+                    1,
+                    configs['devup'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                        # pass
+                        print(do.errorCode, do.errorMessage, 'Devup')
+                except:
+                    pass
+            if bot.bBands["Devdn"] != configs['devdn'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.BBANDS,
+                    2,
+                    configs['devdn'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                            pass
+                            print(do.errorCode, do.errorMessage, 'Devdn')
+                except:
+                    pass
+            if bot.bBands["MaType"] != configs['matype'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.BBANDS,
+                    3,
+                    configs['matype'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                        # pass
+                        print(do.errorCode, do.errorMessage, 'MaType')
+                except:
+                    pass
+            if bot.bBands["AllowMidSell"] != configs['allowmidsells'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.BBANDS,
+                    5,
+                    configs['allowmidsells'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                        # pass
+                        print(do.errorCode, do.errorMessage, 'AllowMidSell')
+                except:
+                    pass
+            if bot.bBands["RequireFcc"] != configs['fcc'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.BBANDS,
+                    6,
+                    configs['fcc'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                        # pass
+                        print(do.errorCode, do.errorMessage, 'RequireFcc')
+                except:
+                    pass
+            if bot.rsi["RsiLength"] != configs['rsil'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.RSI,
+                    0,
+                    configs['rsil'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                        # pass
+                        print(do.errorCode, do.errorMessage, 'RsiLength')
+                except:
+                    pass
+            if bot.rsi["RsiOverbought"] != configs['rsib'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.RSI,
+                    1,
+                    configs['rsib'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                        # pass
+                        print(do.errorCode, do.errorMessage, 'RsiOverbought')
+                except:
+                    pass
+            if bot.rsi["RsiOversold"] != configs['rsis'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.RSI,
+                    2,
+                    configs['rsis'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                        # pass
+                        print(do.errorCode, do.errorMessage, 'RsiOversold')
+                except:
+                    pass
+            if bot.macd["MacdFast"] != configs['macdfast'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.MACD,
+                    0,
+                    configs['macdfast'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                        # pass
+                        print(do.errorCode, do.errorMessage, 'MacdFast')
+                except:
+                    pass
+            if bot.macd["MacdSlow"] != configs['macdslow'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.MACD,
+                    1,
+                    configs['macdslow'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                        # pass
+                        print(do.errorCode, do.errorMessage, 'MacdSlow')
+                except:
+                    pass
+
+            if bot.macd["MacdSign"] != configs['macdsign'][ind]:
+                do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                    bot.guid,
+                    EnumMadHatterIndicators.MACD,
+                    2,
+                    configs['macdsign'][ind],
+                )
+                try:
+                    if do.errorCode != EnumErrorCode.SUCCESS:
+                        # pass
+                        print(do.errorCode, do.errorMessage, 'MacdSign')
+                except:
+                    pass
+
+            else:
+                 print(bot.name, "indicators have been configured")
+            bt = self.bt_mh(bot)
+            configs['roi'][ind] = bt.roi
+            print(configs.sort_values(by='roi', ascending = False))
+        return configs.sort_values(by='roi', ascending=False)
+
+    def bt_mh(self,current_bot):
+
+        ticks = iiv.total_ticks(current_bot)
+        bt = haasomeClient.customBotApi.backtest_custom_bot_on_market(
+            current_bot.accountId,
+            current_bot.guid,
+            int(ticks),
+            current_bot.priceMarket.primaryCurrency,
+            current_bot.priceMarket.secondaryCurrency,
+            current_bot.priceMarket.contractName,
+        )
+        if bt.errorCode != EnumErrorCode.SUCCESS:
+            print("bt", bt.errorCode, bt.errorMessage)
+        else:
+            print(bt.result.roi)
+        return bt.result
+
+    def csv_to_dataframe(self):
+        csv = self.get_csv_file()
+        configs = pd.read_csv(csv)
+        print(configs)
+        return configs
 
 
 
@@ -370,18 +594,26 @@ class BotDB:
     # clone = create_new_custom_bot(bot2, bot)
 
 
+def main2():
+    botlist = botsellector.return_all_mh_bots(haasomeClient)
+    BotDB.all_mh_configs_to_csv(botlist)
 
+def main3():
+    # BotDB().csv_to_dataframe()
+    BotDB().iterate_df_configs()
 def main1():
     botlist = botsellector.return_all_mh_bots(haasomeClient)
+
     bot = botsellector.get_specific_bot(haasomeClient,botlist)
-    db_file = BotDB.return_botlist_files()
+    db_file = BotDB.get_haasbots_file()
     # print(db_file)
 
-    bots_from_file = BotDB.load_botlist(BotDB.return_botlist_files())
+    bots_from_file = BotDB.load_botlist(BotDB.get_haasbots_file())
     # print(bots_from_file)
     # selected_bots = BotDB.return_botlist_range(bots_from_file)
     selected_bot = BotDB.return_bot_from_bot_list(bots_from_file)
     print(selected_bot.name)
+
     # selected_bots = BotDB.return_botlist_range(bots_from_file)
     # print(len(selected_bots),' bots are selected')
     # for i in selected_bots:
@@ -396,27 +628,27 @@ def main1():
     # print(load)
 
 # def main2():
-#     # db_file = BotDB.return_botlist_files()
+#     # db_file = BotDB.get_haasbots_file()
 #     bots_from_file = BotDB.load_botlist(db_file)
 #     bot = BotDB.return_bot_from_bot_list(bots_from_file)
 #     ebot = botsellector.get_mh_bot(haasomeClient)
 #     newbot = BotDB.create_new_custom_bot(bot,ebot)
 
 # def main3():
-#      db_file = BotDB.return_botlist_files()
+#      db_file = BotDB.get_haasbots_file()
 #      bots_from_file = BotDB.load_botlist(db_file)
 #     #  j_save = jsavebots(bots_from_file, 'jsave.db')
 #     #  bots_from_file = jloadbots(jsave.db)
 #     #  print(bots_from_file)
 
 # def main():
-#     db_file = BotDB.return_botlist_files()
+#     db_file = BotDB.get_haasbots_file()
 #     bots_from_file = BotDB.load_botlist(db_file)
 #     for b in bots_from_file:
 #         if type(b) != str:
 #             print(b.name)
 #         # for k in b:
 # #         #     print(k)
-# if __name__ == "__main__":
-#     main2()
-#     main_save_all_mh()
+if __name__ == "__main__":
+    main3()
+    # main_save_all_mh()

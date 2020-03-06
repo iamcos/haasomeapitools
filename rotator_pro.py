@@ -56,7 +56,7 @@ haasomeClient = init.connect()
 
 def bt_mh(current_bot):
 
-    ticks = iiv.readinterval(current_bot)
+    ticks = iiv.total_ticks(current_bot)
     bt = haasomeClient.customBotApi.backtest_custom_bot_on_market(
         current_bot.accountId,
         current_bot.guid,
@@ -75,7 +75,7 @@ def bt_mh(current_bot):
 def setup_mad_hatter_bot(bot,config,haasomeClient):
         print(f'\n{bot.guid}')
         setup_bot = haasomeClient.customBotApi.setup_mad_hatter_bot(
-            botName=config.name,
+            botName=bot.name,
             botGuid=bot.guid,
             accountGuid=bot.accountId,
             primaryCoin=bot.priceMarket.primaryCurrency,
@@ -591,7 +591,7 @@ def autocreate_bots(bot, haasomeClient, botType, botlist, x):
 
 
 def load_bots_from_file(BotDB):
-     db_file = BotDB.return_botlist_files()
+     db_file = BotDB.get_haasbots_file()
      print(f'{db_file} db_file')
      # print(botlistfile)
      configs = BotDB.load_botlist(db_file)
@@ -632,13 +632,12 @@ def intro():
         while True:
             if response == "1":
                 # results = []
-
                 bot = botsellector.get_mh_bot(haasomeClient)
-                # db_file = BotDB.return_botlist_files()
+                # db_file = BotDB.get_haasbots_file()
                 # print(f'{db_file} db_file')
                 # # print(botlistfile)
                 # configs = BotDB.load_botlist(db_file)
-                configs = load_bots_from_file(BotDB)
+                configs = BotDB.get_configs_from_file()
 
                 print(
                     "\n\nMost files contain a limited number of configs, indicating they were created at the end of backtesting stage and thus are sorted in a descending manner, with top-performing configs at the top.\n You have an option to only use specified number of configurations from a file."
@@ -649,7 +648,7 @@ def intro():
                 results = backtest_bot_configs(
                     bot, configs[0:limit], haasomeClient)
                 created = []
-                BotDB.save_configs_for_same_bot_to_file(results)
+                # BotDB.save_configs_for_same_bot_to_file(results)
                 while True:
                     try:
                         new = makebots(bot, haasomeClient,
