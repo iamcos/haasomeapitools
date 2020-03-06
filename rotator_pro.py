@@ -97,8 +97,7 @@ def setup_mad_hatter_bot(bot,config,haasomeClient):
         print(setup_bot.errorCode, setup_bot.errorMessage)
 
 
-        print('something in setup_bot went wrong')
-        return None
+
         # print(setup_bot.result.name, " Has been configured")
         return setup_bot.result
 
@@ -561,7 +560,7 @@ def makebots(bot, haasomeClient, botType, botlist):
         # print(botlist[1], botlist[0])
     for i, b in enumerate(botlist):
         print(f"{i}:{b.roi},{len(b.completedOrders)} trades")
-    x = int(input(" Type bot number to setup given ROI config on a currently selected mad-hatter bot."))
+    x = int(input("Type bot number to setup given ROI config on a currently selected mad-hatter bot. Once satisfied, hit return without entering bot number and the app will initiate automatic stoploss backtesting. Enter bot number here: "))
 
     ticks = int(iiv.readinterval(bot))
     setup_bot = setup_mad_hatter_bot(bot, botlist[x], haasomeClient)

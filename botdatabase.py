@@ -44,6 +44,7 @@ class BotDB:
         userinput = input('Type file number to select it:  ')
         self.db_file = files[int(userinput)]
         return files[int(userinput)]
+
     def get_csv_file(self):
         files =[]
         for file in os.listdir('./'):
@@ -328,7 +329,7 @@ class BotDB:
         botlist = botsellector.return_all_mh_bots(haasomeClient)
         bot = botsellector.get_specific_bot(haasomeClient, botlist)
         configs = self.csv_to_dataframe()
-        configs.drop(columns=['pricesource','primarycoin','secondarycoin'])
+        configs.drop(columns=['pricesource','primarycoin','secondarycoin'], inplace=True)
         results = self.setup(bot, configs)
 
     def select_config(self, configs):
@@ -503,7 +504,7 @@ class BotDB:
                  print(bot.name, "indicators have been configured")
             bt = self.bt_mh(bot)
             configs['roi'][ind] = bt.roi
-            print(configs.sort_values(by='roi', ascending = False))
+            print(configs.sort_values(by='roi', ascending = False).head(10))
         return configs.sort_values(by='roi', ascending=False)
 
     def bt_mh(self,current_bot):
@@ -520,7 +521,7 @@ class BotDB:
         if bt.errorCode != EnumErrorCode.SUCCESS:
             print("bt", bt.errorCode, bt.errorMessage)
         else:
-            print(bt.result.roi)
+            print('Backtest result:', bt.result.roi)
         return bt.result
 
     def csv_to_dataframe(self):
