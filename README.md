@@ -1,15 +1,16 @@
 # haasomeapitools
 
 
-
-
+botdatabase file execution runs iteration algorithm over around 700 mad-hatter configs that are stored in csv files alongside.
+  with botdatabase is possible to load and save bots to files in json and csv or into a database.
+  
 botinterface contains a class that can be imported to any pythong script and enable basic HaasAPI integration.
 
 Scripts to interact with Haasomeapi via the python wrapper
 
 Based on haasomeapi, are scripts that accomplish various tasks with Haas:
 
-botdatabase.py contains scripts to load and save mad-hatter (and possibly other types of bots too) bots to a file, to then recreate them on another machine or use for backtesting.
+
 
 botsellector.py is about selecting bots of every supported type as single botobject or as a list for further manipulations.
 configserver.py is responsible for writing a config file to connect to haasonline via localapi
