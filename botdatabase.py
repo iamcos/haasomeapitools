@@ -365,7 +365,7 @@ class BotDB:
 
 
 
-    def setup_bot(self,bot,configs,ind, ):
+    def setup_bot(self,bot,configs,ind,):
             if bot.bBands["Length"] != configs['bbl'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,

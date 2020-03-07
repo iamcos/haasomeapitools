@@ -3,7 +3,7 @@ import configserver
 
 
 
-def total_ticks(bot):
+def total_ticks():
     year, month, day, hour, minute = configserver.read_bt()
     """ Get backtestin ticks in resolution defined in main bot config
 	:param year: int: year number
@@ -42,12 +42,8 @@ def readinterval(bot):
 
     year, month, day, hour, minute = configserver.read_bt()
     ticks = inticks(int(year), int(month), int(day), int(hour), int(minute) ,bot.interval)
-    print
     return ticks
 
-def returninterval():
-    interval = 1
-    return interval
 
 
 def main():

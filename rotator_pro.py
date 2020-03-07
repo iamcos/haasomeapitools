@@ -46,7 +46,7 @@ import init
 import _thread
 import botsellector
 import configserver
-
+from functools import lru_cache
 # import expiration
 import interval as iiv
 from botdatabase import BotDB as bdb
@@ -56,11 +56,11 @@ haasomeClient = init.connect()
 
 def bt_mh(current_bot):
 
-    ticks = iiv.total_ticks(current_bot)
+    ticks = iiv.total_ticks()
     bt = haasomeClient.customBotApi.backtest_custom_bot_on_market(
         current_bot.accountId,
         current_bot.guid,
-        int(ticks),
+        int(ticks/current_bot.interval),
         current_bot.priceMarket.primaryCurrency,
         current_bot.priceMarket.secondaryCurrency,
         current_bot.priceMarket.contractName,
@@ -347,131 +347,114 @@ def delete_temp_bot(bot):
     print(delete.errorCode, delete.errorMessage)
 
 
-def bruteforce_mh(bot, haasomeClient):
 
-    bt = bt_mh(bot)
-    i = 0
-
-    bot_config = [
-        {
-            "pricesource": EnumPriceSource(bot.priceMarket.priceSource).name,
-            "primarycoin": bot.priceMarket.primaryCurrency,
-            "secondarycoin": bot.priceMarket.secondaryCurrency,
-            "interval": bot.interval,
-            "signalconsensus": bot.useTwoSignals,
-            "resetmiddle": bot.bBands["ResetMid"],
-            "allowmidsells": bot.bBands["AllowMidSell"],
-            "matype": bot.bBands["MaType"],
-            "fcc": bot.bBands["RequireFcc"],
-            "rsil": bot.rsi["RsiLength"],
-            "rsib": bot.rsi["RsiOversold"],
-            "rsis": bot.rsi["RsiOverbought"],
-            "bbl": bot.bBands["Length"],
-            "devup": bot.bBands["Devup"],
-            "devdn": bot.bBands["Devdn"],
-            "macdfast": bot.macd["MacdFast"],
-            "macdslow": bot.macd["MacdSlow"],
-            "macdsign": bot.macd["MacdSign"],
-            "roi": bt.roi,
-        }
-    ]
-
-    bot_config_pd = pd.DataFrame(bot_config, columns=bot_config[0].keys(),)
-
-    return bot_config_pd
-
-
-def bruteforce_rsi(bot, bot_config_pd, haasomeClient):
-
-    btr = []
-    btr.append(bot)
-
+def mh_config_roi_db(bot):
+    btr = {}
     rsil = int(bot.rsi["RsiLength"])
     rsis = int(bot.rsi["RsiOversold"])
     rsib = int(bot.rsi["RsiOverbought"])
 
-    print(rsil, rsib, rsis)
-    for l in range(rsil, rsil + 10):
+    for rsil <= 2:
+        rsil = 2
+        do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+            bot.guid, EnumMadHatterIndicators.RSI, 0, rsil)
+        rsib = 2
+        do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+            bot.guid, EnumMadHatterIndicators.RSI, 1,rsib)
+        rsis = 99
+        do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+            bot.guid, EnumMadHatterIndicators.RSI, 2,rsis)
+        bt = bt_mh(bot)
+
+        rsil = +1
+        do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+            bot.guid, EnumMadHatterIndicators.RSI, 0, rsil)
+        bt = bt_mh(bot)
+
+
+
+def bruteforce_rsi(bot, haasomeClient):
+
+
+
+
+    print(f'RSI L: {rsil}, B:{rsib}, S:{rsis}')
+    configs = find_rsi_widest(bot,haasomeClient)
+
+@lru_cache(maxsize=None, typed=True)
+def find_rsi_widest(bot, haasomeClient):
+    bt = bt_mh(bot)
+
+    btr = []
+    btr.append(bt)
+    lrange = {}
+    def memoize(f):
+        memo = {}
+        def helper(x):
+            if x not in memo:
+                memo[x] = f(x)
+            return memo[x]
+        return helper
+    for l in range(l - 3, l + 3, 1):
+        if l not in lrange:
+            lrange[l] = bt.roi
+        return lrange[l]
         do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
             bot.guid, EnumMadHatterIndicators.RSI, 0, l
         )
-        do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
-            bot.guid, EnumMadHatterIndicators.RSI, 2, 80
-        )
-        do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
-            bot.guid, EnumMadHatterIndicators.RSI, 1, 20
-        )
-        print(do.errorCode, do.errorMessage, "RsiLength")
-        for x in range(rsis, rsis + 20, 3):
-            do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
-                bot.guid, EnumMadHatterIndicators.RSI, 1, x
-            )
-            print(do.errorCode, do.errorMessage, "RsiOverbought")
+        bt = bt_mh(bot)
+        lrange[l]=bt.roi
 
-            for y in range(rsib, rsib - 20, -2):
-                if y > 90:
-                    pass
-                else:
+    if l <= 2:
+        do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+            bot.guid, EnumMadHatterIndicators.RSI, 0, 2
+        )
+    elif l > 2 and if l < 5:
+        do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+            bot.guid, EnumMadHatterIndicators.RSI, 0, l
+        )
+        if btr[-1].roi = None:
+            if btr[-2].roi = None:
+                 bt = bt_mh(bot)
+                 btr.append(bt)
+
+
+
+        for s in range(8,40,3):
+            do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid, EnumMadHatterIndicators.RSI, 2, s
+            )
+            for b in range(90,60,-3):
                     do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
-                        bot.guid, EnumMadHatterIndicators.RSI, 2, y
-                    )
-                    print(do.errorCode, do.errorMessage, "RsiOversold")
+                    bot.guid, EnumMadHatterIndicators.RSI, 1, 20
+                )
+
 
                     bt = bt_mh(bot)
-                    bot_config = {
-                        "pricesource": EnumPriceSource(bt.priceMarket.priceSource).name,
-                        "primarycoin": bt.priceMarket.primaryCurrency,
-                        "secondarycoin": bt.priceMarket.secondaryCurrency,
-                        "interval": bt.interval,
-                        "signalconsensus": bt.useTwoSignals,
-                        "resetmiddle": bt.bBands["ResetMid"],
-                        "allowmidsells": bt.bBands["AllowMidSell"],
-                        "matype": bt.bBands["MaType"],
-                        "fcc": bt.bBands["RequireFcc"],
-                        "rsil": bt.rsi["RsiLength"],
-                        "rsib": bt.rsi["RsiOversold"],
-                        "rsis": bt.rsi["RsiOverbought"],
-                        "bbl": bt.bBands["Length"],
-                        "devup": bt.bBands["Devup"],
-                        "devdn": bt.bBands["Devdn"],
-                        "macdfast": bt.macd["MacdFast"],
-                        "macdslow": bt.macd["MacdSlow"],
-                        "macdsign": bt.macd["MacdSign"],
-                        "roi": bt.roi,
-                    }
-                    bot_config_pd2 = pd.DataFrame([bot_config])
                     btr.append(bt)
-                    # try:
-                    # 	if btr[-1].roi > btr[-2].roi:
 
-                    # bot_config_pd = pd.merge(bot_config_pd2, bot_config_pd)
-                    # bot_config_pd.append(bot_config_pd2, ignore_index=True)
-                    print(bot_config_pd2)
-    # print(bot_config_pd)
-    # for bot in btr:
-    # 	print(bot.guid)
-    sorti = sorted(btr, key=lambda x: x.roi, reverse=True)
-    for i in sorti:
+
+    sorted_results = sorted(btr, key=lambda x: x.roi, reverse=True)
+    for i in sorted_results:
         print(i.roi)
+    while True:
+        usrinput = input('Type config number to apply:')
+
     do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
-        bot.guid, EnumMadHatterIndicators.RSI, 0, sorti[1].rsi["RsiLength"]
+        bot.guid, EnumMadHatterIndicators.RSI, 0, sorted_results[1].rsi["RsiLength"]
     )
     print(
         do.errorCode,
         do.errorMessage,
-        sorti[1].rsi["RsiLength"],
-        sorti[1].rsi["RsiOversold"],
-        sorti[1].rsi["RsiOverbought"],
     )
     do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
-        bot.guid, EnumMadHatterIndicators.RSI, 1, sorti[1].rsi["RsiOversold"]
+        bot.guid, EnumMadHatterIndicators.RSI, 1, sorted_results[1].rsi["RsiOversold"]
     )
     do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
-        bot.guid, EnumMadHatterIndicators.RSI, 2, sorti[1].rsi["RsiOverbought"]
+        bot.guid, EnumMadHatterIndicators.RSI, 2, sorted_results[1].rsi["RsiOverbought"]
     )
-    print("hey hey", bot.guid, btr[0].guid)
 
-    BotDB.save_configs_for_same_bot_to_file(btr)
+    # BotDB.save_configs_for_same_bot_to_file(btr)
     return bot_config_pd
 
 
@@ -674,8 +657,7 @@ def intro():
         elif response == "4":
             bot = botsellector.get_mh_bot(haasomeClient)
             # safety = find_good_safety(bot,haasomeClient)
-            brute = bruteforce_mh(bot, haasomeClient)
-            bruteforce_rsi(bot, brute, haasomeClient)
+            bruteforce_rsi(bot, haasomeClient)
             break
         elif response == "5":
             bot = botsellector.get_mh_bot(haasomeClient)
