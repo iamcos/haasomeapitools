@@ -21,7 +21,6 @@ from datetime import datetime
 from multiprocessing import Lock, Process, Queue, current_process
 import queue
 from multiprocessing.dummy import Pool
-import grequests
 import requests
 import asyncio
 import time

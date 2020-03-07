@@ -560,7 +560,7 @@ def makebots(bot, haasomeClient, botType, botlist):
         # print(botlist[1], botlist[0])
     for i, b in enumerate(botlist):
         print(f"{i}:{b.roi},{len(b.completedOrders)} trades")
-    x = int(input("Type bot number to setup given ROI config on a currently selected mad-hatter bot. Once satisfied, hit return without entering bot number and the app will initiate automatic stoploss backtesting. Enter bot number here: "))
+    x = int(input("To apply one of the configs from above, type its number and hit return here: "))
 
     ticks = int(iiv.readinterval(bot))
     setup_bot = setup_mad_hatter_bot(bot, botlist[x], haasomeClient)
@@ -623,95 +623,95 @@ def intro():
     # print('3. Analyze and create bots stored in files, be it saved bt results or of another machine')
     print("4. bruteforce bot params ")
     print("5. Backtest single Mad Hatter Safety")
-    print("6. Backtest every bot with name starting with word Tune")
-    print(f'7. Carousel between configs.')
+    # print("6. Backtest every bot with name starting with word Tune")
+    # print(f'7. Carousel between configs.')
     # response = input('Type number of action here: ')
-    while True:
-        response = input("Type number of action here: ")
-        while True:
-            if response == "1":
-                # results = []
-                bot = botsellector.get_mh_bot(haasomeClient)
-                # db_file = BotDB.get_haasbots_file()
-                # print(f'{db_file} db_file')
-                # # print(botlistfile)
-                # configs = BotDB.load_botlist(db_file)
-                configs = BotDB.get_configs_from_file()
 
-                print(
-                    "\n\nMost files contain a limited number of configs, indicating they were created at the end of backtesting stage and thus are sorted in a descending manner, with top-performing configs at the top.\n You have an option to only use specified number of configurations from a file."
+    response = input("Type number of action here: ")
+    while True:
+        if response == "1":
+            # results = []
+            bot = botsellector.get_mh_bot(haasomeClient)
+            # db_file = BotDB.get_haasbots_file()
+            # print(f'{db_file} db_file')
+            # # print(botlistfile)
+            # configs = BotDB.load_botlist(db_file)
+            configs = BotDB.get_configs_from_file()
+
+            print(
+                "\n\nMost files contain a limited number of configs, indicating they were created at the end of backtesting stage and thus are sorted in a descending manner, with top-performing configs at the top.\n You have an option to only use specified number of configurations from a file."
+            )
+            print("\nCurrent file contains ",
+                    len(configs), "bot configs\n")
+            limit = int(input("Type number of configs to use: "))
+            results = backtest_bot_configs(
+                bot, configs[0:limit], haasomeClient)
+            created = []
+            # BotDB.save_configs_for_same_bot_to_file(results)
+            while True:
+                try:
+                    new = makebots(bot, haasomeClient,
+                                    bot.botType, results)
+                    created.append(new)
+                except ValueError:
+                    break
+
+            # for bot in created:
+            #     find_good_safety(bot, haasomeClient)
+            break
+
+        elif response == "2":
+
+            configserver.set_bt()
+
+            break
+
+        elif response == "3":
+            botlistfile = BotDB.get_botlist_file()
+            bots = BotDB.load_bots_from_file(botlistfile)
+            history.plot_bots(bots)
+
+        elif response == "4":
+            bot = botsellector.get_mh_bot(haasomeClient)
+            # safety = find_good_safety(bot,haasomeClient)
+            brute = bruteforce_mh(bot, haasomeClient)
+            bruteforce_rsi(bot, brute, haasomeClient)
+            break
+        elif response == "5":
+            bot = botsellector.get_mh_bot(haasomeClient)
+            find_good_safety(bot, haasomeClient)
+        elif response == "6":
+            botlist = botsellector.gets_pecific_mh_bot_list(haasomeClient)
+            botlistfile = BotDB.get_botlist_file()
+            configs = BotDB.load_bots_from_file(botlistfile)
+            print(
+                "\n\nMost files contain a limited number of configs, indicating they were created at the end of backtesting stage and thus are sorted in a descending manner, with top-performing configs at the top.\n You have an option to only use specified number of configurations from a file."
+            )
+            print("\nCurrent file contains ",
+                    len(configs), "bot configs\n")
+            limit = int(input("Type number of configs to use: "))
+            x = int(
+                input(
+                    "After backtesting is complete, there will be multiple results for each. In this mode you need to input a number of bots to be created auutomatically for now. Enter it now: "
                 )
-                print("\nCurrent file contains ",
-                      len(configs), "bot configs\n")
-                limit = int(input("Type number of configs to use: "))
+            )
+            for bot in botlist:
                 results = backtest_bot_configs(
                     bot, configs[0:limit], haasomeClient)
-                created = []
-                # BotDB.save_configs_for_same_bot_to_file(results)
-                while True:
-                    try:
-                        new = makebots(bot, haasomeClient,
-                                       bot.botType, results)
-                        created.append(new)
-                    except ValueError:
-                        break
-
-                for bot in created:
-                    find_good_safety(bot, haasomeClient)
+                BotDB.save_configs_for_same_bot_to_file(results)
+                bl = autocreate_bots(bot, haasomeClient,
+                                        bot.botType, results, x)
+                for b in bl:
+                    find_good_safety(b, haasomeClient)
                 break
+        elif response == "7":
 
-            elif response == "2":
+            configserver.set_bt()
 
-                configserver.set_bt()
+            break
+        else:
+            pass
 
-                break
-
-            elif response == "3":
-                botlistfile = BotDB.get_botlist_file()
-                bots = BotDB.load_bots_from_file(botlistfile)
-                history.plot_bots(bots)
-
-            elif response == "4":
-                bot = botsellector.get_mh_bot(haasomeClient)
-                # safety = find_good_safety(bot,haasomeClient)
-                brute = bruteforce_mh(bot, haasomeClient)
-                bruteforce_rsi(bot, brute, haasomeClient)
-                break
-            elif response == "5":
-                bot = botsellector.get_mh_bot(haasomeClient)
-                find_good_safety(bot, haasomeClient)
-            elif response == "6":
-                botlist = botsellector.gets_pecific_mh_bot_list(haasomeClient)
-                botlistfile = BotDB.get_botlist_file()
-                configs = BotDB.load_bots_from_file(botlistfile)
-                print(
-                    "\n\nMost files contain a limited number of configs, indicating they were created at the end of backtesting stage and thus are sorted in a descending manner, with top-performing configs at the top.\n You have an option to only use specified number of configurations from a file."
-                )
-                print("\nCurrent file contains ",
-                      len(configs), "bot configs\n")
-                limit = int(input("Type number of configs to use: "))
-                x = int(
-                    input(
-                        "After backtesting is complete, there will be multiple results for each. In this mode you need to input a number of bots to be created auutomatically for now. Enter it now: "
-                    )
-                )
-                for bot in botlist:
-                    results = backtest_bot_configs(
-                        bot, configs[0:limit], haasomeClient)
-                    BotDB.save_configs_for_same_bot_to_file(results)
-                    bl = autocreate_bots(bot, haasomeClient,
-                                         bot.botType, results, x)
-                    for b in bl:
-                        find_good_safety(b, haasomeClient)
-                    break
-            elif response == "7":
-
-                configserver.set_bt()
-
-                break
-            else:
-                pass
-        break
     #  1/11/19 16:30
 
 

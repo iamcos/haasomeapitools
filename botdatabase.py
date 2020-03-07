@@ -44,7 +44,6 @@ class BotDB:
         userinput = input('Type file number to select it:  ')
         self.db_file = files[int(userinput)]
         return files[int(userinput)]
-
     def get_csv_file(self):
         files =[]
         for file in os.listdir('./'):
@@ -57,7 +56,7 @@ class BotDB:
         return files[int(userinput)]
 
     def load_bots_from_file(self, file):
-        db_file = self.get_haasbots_file()
+        db_file = file
         print(f'{db_file} db_file')
         # print(botlistfile)
         configs = self.load_botlist(db_file)
@@ -115,7 +114,7 @@ class BotDB:
             for bot in bots:
              frozenbotlist = jsonpickle.encode(bot)
         except Exception as e:
-            print(e)
+           print(e)
 
         currentfile = Path(str(filename))
         currentfile.touch(exist_ok=True)
@@ -329,7 +328,7 @@ class BotDB:
         botlist = botsellector.return_all_mh_bots(haasomeClient)
         bot = botsellector.get_specific_bot(haasomeClient, botlist)
         configs = self.csv_to_dataframe()
-        configs.drop(columns=['pricesource','primarycoin','secondarycoin'], inplace=True)
+        # configs.drop(columns=['pricesource','primarycoin','secondarycoin'])
         results = self.setup(bot, configs)
 
     def select_config(self, configs):
@@ -504,7 +503,7 @@ class BotDB:
                  print(bot.name, "indicators have been configured")
             bt = self.bt_mh(bot)
             configs['roi'][ind] = bt.roi
-            print(configs.sort_values(by='roi', ascending = False).head(10))
+            print(configs.sort_values(by='roi', ascending = False).head(20))
         return configs.sort_values(by='roi', ascending=False)
 
     def bt_mh(self,current_bot):
@@ -521,7 +520,7 @@ class BotDB:
         if bt.errorCode != EnumErrorCode.SUCCESS:
             print("bt", bt.errorCode, bt.errorMessage)
         else:
-            print('Backtest result:', bt.result.roi)
+            print(bt.result.roi)
         return bt.result
 
     def csv_to_dataframe(self):
@@ -601,6 +600,11 @@ def main2():
 
 def main3():
     # BotDB().csv_to_dataframe()
+    uip = input('Would you like to set backtesting date? (y/n): ')
+    if uip == 'y' or uip == 'yes' or uip =='Yes' or uip =='YES' or uip == 'Y':
+        configserver.set_bt()
+    else:
+        pass
     BotDB().iterate_df_configs()
 def main1():
     botlist = botsellector.return_all_mh_bots(haasomeClient)
