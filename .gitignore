@@ -3,7 +3,7 @@ BotConfigs
 .macenv
 .vscode
 __pycache__
-*.csv
+#*.csv
 *.ini
 *.db
 

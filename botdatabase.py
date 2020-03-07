@@ -1,3 +1,5 @@
+from threading import Timer
+from threading import Thread
 import botsellector
 import configserver
 import json
@@ -269,6 +271,9 @@ class BotDB:
             newbot.guid, EnumMadHatterSafeties.STOP_LOSS, example_bot.stopLoss)
         print(stopLoss.errorCode,stopLoss.errorMessage)
 
+    def split_csv(self, chunks):
+        file = self.get_csv_file()
+
 
     def all_mh_configs_to_csv(botlist):
         filename = str(datetime.datetime.today())+' '+str(len(botlist))+' Mad-Hatter-Bots.csv'
@@ -324,6 +329,9 @@ class BotDB:
             )
 
 
+
+
+
     def iterate_df_configs(self):
         botlist = botsellector.return_all_mh_bots(haasomeClient)
         bot = botsellector.get_specific_bot(haasomeClient, botlist)
@@ -331,18 +339,17 @@ class BotDB:
         # configs.drop(columns=['pricesource','primarycoin','secondarycoin'])
         results = self.setup(bot, configs)
         BotDB().dataframe_to_csv(bot, results)
-        configs = self.user_selected_bot_config(bot, configs)
+        results.sort_values(by='roi', ascending=False, inplace=True)
+        btsts = self.user_selected_bot_config(bot, results)
 
         return results
-    def select_config(self, configs):
 
-        print(configs)
-        userinput = input('Please specify the bot number you wish to')
 
     def setup(self, bot,configs, index = None):
 
         if index == None:
             for ind in configs.index:
+
                 print(ind)
                 configs = self.setup_bot(bot, configs, ind)
         else:
@@ -350,11 +357,14 @@ class BotDB:
         return configs.sort_values(by='roi', ascending=False)
     def user_selected_bot_config(self, bot, configs):
         while True:
-            ind = input('Type bot number to apply given config to selected bot or type X to exit: ')
-            configs = self.setup(bot, configs, int(ind))
-            bt = self.bt_mh_show(bot)
-            if ind == 'X':
-                break
+            ind = input('Type bot number to apply given config to selected bot or type X or x to select another bot: ')
+            if ind == 'X' or ind == 'x':
+               self.iterate_df_configs()
+            else:
+                configs = self.setup(bot, configs, ind)
+                bt = self.bt_mh_visible_roi(bot)
+
+
 
     def setup_bot(self,bot,configs,ind):
             if bot.bBands["Length"] != configs['bbl'][int(ind)]:
@@ -539,7 +549,7 @@ class BotDB:
             print(bt.result.roi)
         return bt.result
 
-    def bt_mh_show(self, current_bot):
+    def bt_mh_visible_roi(self, current_bot):
 
         ticks = iiv.total_ticks(current_bot)
         bt = haasomeClient.customBotApi.backtest_custom_bot(

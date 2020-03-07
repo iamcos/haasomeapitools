@@ -1,0 +1,4 @@
+index,index,index.1,index.1.1,index.1.1.1,index.1.1.1.1,index.1.1.1.1.1,index.1.1.1.1.1.1,index.1.1.1.1.1.1.1,index.1.1.1.1.1.1.1.1,index.1.1.1.1.1.1.1.1.1,index.1.1.1.1.1.1.1.1.1.1,index.1.1.1.1.1.1.1.1.1.1.1,interval,signalconsensus,fcc,resetmiddle,allowmidsells,matype,rsil,rsib,rsis,bbl,devup,devdn,macdfast,macdslow,macdsign,roi
+0,0,0,0,0,0,0,0,0,0,0,7,4,4,True,False,False,False,0,21,32.0,68.0,31,2.3,2.0,22,120,3,7.4249
+1,1,2,2,1,2,2,1,1,1,1,1,7,5,False,False,False,False,8,21,37.0,63.0,13,1.7,1.99,5,30,2,2.5501
+2,2,1,1,2,1,1,2,2,2,2,8,9,5,True,False,False,False,6,21,33.0,71.0,15,2.0,2.0,9,23,31,2.2071
