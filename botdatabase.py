@@ -219,8 +219,7 @@ class BotDB:
         BotDB.set_safety_parameters(new.result, example_bot)
         return new.result
 
-
-    def setup_mad_hatter_bot(current_bot, haasomeClient):
+    def setup_mad_hatter_bot(current_bot, haasomeClient, interval):
         botname = str(current_bot.priceMarket.primaryCurrency) + str(' / ') + \
                     str(current_bot.priceMarket.secondaryCurrency) + str(' Roi ') + str(current_bot.roi)
         setup_bot = haasomeClient.customBotApi.setup_mad_hatter_bot(
@@ -366,7 +365,7 @@ class BotDB:
 
 
 
-    def setup_bot(self,bot,configs,ind):
+    def setup_bot(self,bot,configs,ind, ):
             if bot.bBands["Length"] != configs['bbl'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
@@ -524,6 +523,29 @@ class BotDB:
                         print(do.errorCode, do.errorMessage, 'MacdSign')
                 except:
                     pass
+            if bot.interval != configs['interval'][int(ind)]:
+                botname = str(bot.priceMarket.primaryCurrency) + str(' / ') + \
+                    str(bot.priceMarket.secondaryCurrency) + str(' Roi ') + str(bot.roi)
+                setup_bot = haasomeClient.customBotApi.setup_mad_hatter_bot(
+                botName = bot.name,
+                botGuid=bot.guid,
+                accountGuid=bot.accountId,
+                primaryCoin=bot.priceMarket.primaryCurrency,
+                secondaryCoin=bot.priceMarket.secondaryCurrency,
+                contractName=bot.priceMarket.contractName,
+                leverage=bot.leverage,
+                templateGuid=bot.customTemplate,
+                position=bot.coinPosition,
+                fee=bot.currentFeePercentage,
+                tradeAmountType=bot.amountType,
+                tradeAmount=bot.currentTradeAmount,
+                useconsensus=bot.useTwoSignals,
+                disableAfterStopLoss=bot.disableAfterStopLoss,
+                interval=configs['interval'][int(ind)],
+                includeIncompleteInterval=bot.includeIncompleteInterval,
+                mappedBuySignal=bot.mappedBuySignal,
+                mappedSellSignal=bot.mappedSellSignal,).result
+                print(bot.name,' Has been configured')
 
             else:
                  print(bot.name, "indicators have been configured")
