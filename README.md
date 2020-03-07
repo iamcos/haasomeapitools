@@ -1,5 +1,5 @@
 # haasomeapitools
-
+[![Run on Repl.it](https://repl.it/badge/github/iamcos/haasomeapitools)](https://repl.it/github/iamcos/haasomeapitools)
 
 botdatabase file execution runs iteration algorithm over around 700 mad-hatter configs that are stored in csv files alongside.
   with botdatabase is possible to load and save bots to files in json and csv or into a database.
