@@ -545,14 +545,15 @@ class BotDB:
                 includeIncompleteInterval=bot.includeIncompleteInterval,
                 mappedBuySignal=bot.mappedBuySignal,
                 mappedSellSignal=bot.mappedSellSignal,).result
-                print(bot.name,' Has been configured')
+                # print(bot.name,' Has been configured')
 
             else:
-                 print(bot.name, "indicators have been configured")
+                print(bot.name,' Has been configured')
             bt = self.bt_mh(bot)
             configs['roi'][int(ind)] = bt.roi
-            print(configs.sort_values(by='roi', ascending = False).head(20))
-            return configs.sort_values(by='roi', ascending=False)
+            configs.sort_values(by='roi', ascending=False, inplace=True)
+            print(configs.head(20))
+            return configs
 
     def bt_mh(self,current_bot):
 
