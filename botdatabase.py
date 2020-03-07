@@ -330,23 +330,39 @@ class BotDB:
         configs = self.csv_to_dataframe()
         # configs.drop(columns=['pricesource','primarycoin','secondarycoin'])
         results = self.setup(bot, configs)
+        BotDB().dataframe_to_csv(bot, results)
+        configs = self.user_selected_bot_config(bot, configs)
 
+        return results
     def select_config(self, configs):
 
         print(configs)
         userinput = input('Please specify the bot number you wish to')
 
-    def setup(self, bot,configs):
+    def setup(self, bot,configs, index = None):
 
-        for ind in configs.index:
-            print(ind)
+        if index == None:
+            for ind in configs.index:
+                print(ind)
+                configs = self.setup_bot(bot, configs, ind)
+        else:
+            configs = self.setup_bot(bot,configs,str(index))
+        return configs.sort_values(by='roi', ascending=False)
+    def user_selected_bot_config(self, bot, configs):
+        while True:
+            ind = input('Type bot number to apply given config to selected bot or type X to exit: ')
+            configs = self.setup(bot, configs, int(ind))
+            bt = self.bt_mh_show(bot)
+            if ind == 'X':
+                break
 
-            if bot.bBands["Length"] != configs['bbl'][ind]:
+    def setup_bot(self,bot,configs,ind):
+            if bot.bBands["Length"] != configs['bbl'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.BBANDS,
                 0,
-                configs['bbl'][ind]
+                    configs['bbl'][int(ind)]
             )
             try:
                 if do.errorCode != EnumErrorCode.SUCCESS:
@@ -354,12 +370,12 @@ class BotDB:
                     print(do.erro/rCode, do.errorMessage, 'Length')
             except:
                 pass
-            if bot.bBands["Devup"] != configs['devup'][ind]:
+            if bot.bBands["Devup"] != configs['devup'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.BBANDS,
                     1,
-                    configs['devup'][ind],
+                    configs['devup'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -367,12 +383,12 @@ class BotDB:
                         print(do.errorCode, do.errorMessage, 'Devup')
                 except:
                     pass
-            if bot.bBands["Devdn"] != configs['devdn'][ind]:
+            if bot.bBands["Devdn"] != configs['devdn'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.BBANDS,
                     2,
-                    configs['devdn'][ind],
+                    configs['devdn'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -380,12 +396,12 @@ class BotDB:
                             print(do.errorCode, do.errorMessage, 'Devdn')
                 except:
                     pass
-            if bot.bBands["MaType"] != configs['matype'][ind]:
+            if bot.bBands["MaType"] != configs['matype'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.BBANDS,
                     3,
-                    configs['matype'][ind],
+                    configs['matype'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -393,12 +409,12 @@ class BotDB:
                         print(do.errorCode, do.errorMessage, 'MaType')
                 except:
                     pass
-            if bot.bBands["AllowMidSell"] != configs['allowmidsells'][ind]:
+            if bot.bBands["AllowMidSell"] != configs['allowmidsells'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.BBANDS,
                     5,
-                    configs['allowmidsells'][ind],
+                    configs['allowmidsells'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -406,12 +422,12 @@ class BotDB:
                         print(do.errorCode, do.errorMessage, 'AllowMidSell')
                 except:
                     pass
-            if bot.bBands["RequireFcc"] != configs['fcc'][ind]:
+            if bot.bBands["RequireFcc"] != configs['fcc'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.BBANDS,
                     6,
-                    configs['fcc'][ind],
+                    configs['fcc'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -419,12 +435,12 @@ class BotDB:
                         print(do.errorCode, do.errorMessage, 'RequireFcc')
                 except:
                     pass
-            if bot.rsi["RsiLength"] != configs['rsil'][ind]:
+            if bot.rsi["RsiLength"] != configs['rsil'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.RSI,
                     0,
-                    configs['rsil'][ind],
+                    configs['rsil'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -432,12 +448,12 @@ class BotDB:
                         print(do.errorCode, do.errorMessage, 'RsiLength')
                 except:
                     pass
-            if bot.rsi["RsiOverbought"] != configs['rsib'][ind]:
+            if bot.rsi["RsiOverbought"] != configs['rsib'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.RSI,
                     1,
-                    configs['rsib'][ind],
+                    configs['rsib'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -445,12 +461,12 @@ class BotDB:
                         print(do.errorCode, do.errorMessage, 'RsiOverbought')
                 except:
                     pass
-            if bot.rsi["RsiOversold"] != configs['rsis'][ind]:
+            if bot.rsi["RsiOversold"] != configs['rsis'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.RSI,
                     2,
-                    configs['rsis'][ind],
+                    configs['rsis'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -458,12 +474,12 @@ class BotDB:
                         print(do.errorCode, do.errorMessage, 'RsiOversold')
                 except:
                     pass
-            if bot.macd["MacdFast"] != configs['macdfast'][ind]:
+            if bot.macd["MacdFast"] != configs['macdfast'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.MACD,
                     0,
-                    configs['macdfast'][ind],
+                    configs['macdfast'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -471,12 +487,12 @@ class BotDB:
                         print(do.errorCode, do.errorMessage, 'MacdFast')
                 except:
                     pass
-            if bot.macd["MacdSlow"] != configs['macdslow'][ind]:
+            if bot.macd["MacdSlow"] != configs['macdslow'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.MACD,
                     1,
-                    configs['macdslow'][ind],
+                    configs['macdslow'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -485,12 +501,12 @@ class BotDB:
                 except:
                     pass
 
-            if bot.macd["MacdSign"] != configs['macdsign'][ind]:
+            if bot.macd["MacdSign"] != configs['macdsign'][int(ind)]:
                 do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
                     bot.guid,
                     EnumMadHatterIndicators.MACD,
                     2,
-                    configs['macdsign'][ind],
+                    configs['macdsign'][int(ind)],
                 )
                 try:
                     if do.errorCode != EnumErrorCode.SUCCESS:
@@ -502,9 +518,9 @@ class BotDB:
             else:
                  print(bot.name, "indicators have been configured")
             bt = self.bt_mh(bot)
-            configs['roi'][ind] = bt.roi
+            configs['roi'][int(ind)] = bt.roi
             print(configs.sort_values(by='roi', ascending = False).head(20))
-        return configs.sort_values(by='roi', ascending=False)
+            return configs.sort_values(by='roi', ascending=False)
 
     def bt_mh(self,current_bot):
 
@@ -523,13 +539,31 @@ class BotDB:
             print(bt.result.roi)
         return bt.result
 
+    def bt_mh_show(self, current_bot):
+
+        ticks = iiv.total_ticks(current_bot)
+        bt = haasomeClient.customBotApi.backtest_custom_bot(
+            current_bot.guid,
+            int(ticks),
+        )
+        if bt.errorCode != EnumErrorCode.SUCCESS:
+            print("bt", bt.errorCode, bt.errorMessage)
+        else:
+            print(bt.result.roi)
+        return bt.result
+
     def csv_to_dataframe(self):
         csv = self.get_csv_file()
         configs = pd.read_csv(csv)
         print(configs)
         return configs
 
-
+    def dataframe_to_csv(self, bot, df):
+        filename = f'{EnumPriceSource(bot.priceMarket.priceSource).name},{bot.priceMarket.primaryCurrency},{bot.priceMarket.secondaryCurrency}.csv'
+        df.to_csv(filename, index_label='index', )
+        print("Configs saved to csv for given mrket and pair")
+    def setup_bot_from_csv(self, bot, csv):
+        csv = sealf.get_csv_file()
 
     def jsavebots(botlist, file):
         frozenobjlist = []
@@ -596,7 +630,7 @@ class BotDB:
 
 def main2():
     botlist = botsellector.return_all_mh_bots(haasomeClient)
-    BotDB.all_mh_configs_to_csv(botlist)
+    configs = BotDB.all_mh_configs_to_csv(botlist)
 
 def main3():
     # BotDB().csv_to_dataframe()
@@ -605,7 +639,8 @@ def main3():
         configserver.set_bt()
     else:
         pass
-    BotDB().iterate_df_configs()
+    results = BotDB().iterate_df_configs()
+
 def main1():
     botlist = botsellector.return_all_mh_bots(haasomeClient)
 
