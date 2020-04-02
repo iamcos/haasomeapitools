@@ -25,33 +25,28 @@ class Haas():
 	def client(self):
 		ip, secret = configserver.validateserverdata()
 		haasomeClient = HaasomeClient(ip, secret)
-		return haasomeClient()
+		return haasomeClient
 
 class Bot(Haas):
 	def __init__(self):
 		Haas.__init__(self)
-
 
 class TradeBot(Bot):
 
 	def __init__(self):
 		Bot.__init__(self)
 
+
 	def get_indicators(self,bot):
-		#returns all tradebot indicators
+		'''
+		returns all tradebot indicators as a list
+		'''
 		indicators = {}
 		idd = list([bot.indicators[x] for x in bot.indicators])
-
-		for indicator in bot.indicators:
-			indicators[bot.indicators[indicator].indicatorTypeShortName] = indicator
-		# print(idd)
-		# df = pd.DataFrame(indicators)
-		# print(df)
 		return idd
 
 	def select_indicator(self,indicators):
 
-		# print(indicators[0].indicatorTypeFullName)
 		for i, b in enumerate(indicators):
 			print(i, indicators[i].indicatorTypeFullName)
 		uip = input('Select indicator')
@@ -60,9 +55,9 @@ class TradeBot(Bot):
 		# print(indicator)
 		return indicator
 	def setup_indicator(self, indicator):
-		self.c.TradeBotApi.setup_indicator(bot.guid, indicator.guid,
+		setup = self.c.TradeBotApi.setup_indicator(bot.guid, indicator.guid,
                                        bot.priceMarket, bot.priceMarket.primaryCurrency, bot.priceMarket.secondaryCurrency, bot.priceMarket.contractName, indicator.timer, indicator.chartType, indicator.deviation)
-
+		print(f'Indicator setup was a {setup.errorCode.value}, {setup.errorMessage.value}')
 	def get_interfaces(self,bot,indicator):
 		#returns all indicator interfaces
 		interfaces = {}
@@ -70,11 +65,9 @@ class TradeBot(Bot):
 		for i,interface in enumerate(bot.indicators[indicator].indicatorInterface):
 
 			interfaces[i] = {'title': interface.title, 'value': interface.value, 'options': interface.options, 'step':interface.step}
-			# interfaces[i] = [{(str(x) for x in list(inteface.keys()):interface[x]} for x in interface}]
-			keys = interfaces.keys()
+
 			interfaces2.append({'title': interface.title, 'value': interface.value, 'options': interface.options, 'step': interface.step})
-		# interfaces2[i] = [
-			# {str(x): bot.indicators[indicator].indicatorInterface[x]} for x in indicator]
+
 		return interfaces, interfaces2
 
 
@@ -188,12 +181,25 @@ class BackTesting(Haas):
 		Haas.__init__(self)
 
 	def iterate_indicator(self, indicator, bot):
-
-		interfaces = self.get_interfaces(indicator)
-		bt_range = self.dfine_bt_range(indicator)
+		tb = TradeBot()
+		interfaces = tb.get_interfaces(bot,indicator)
+		bt_range = tb.autocreate_ranges(bot,indicator)
 		for i, interface in enumerate(interfaces):
 			resbrute = optimize.brute(get_bt_reults, bt_range,args=(bot,indicator),full_output=True,finish=optimize.fmin)
 
+	def autocreate_ranges(self,bot,indicator):
+		tb = TradeBot()
+		interfaces = tb.get_interfaces(bot,indicator)
+		interface_ranges = []
+
+		for i, interface in enumerate(interfaces):
+			if interface[i]['step'] == 0.01:
+				interface_ranges.append(
+					([interface[i]['step'], interface[i]['step']* 200, interface[i]['step']]))
+			else:
+				interface_ranges.append(([interface[i]['step'], interface[i]['step'] * 100, interface[i]['step']]))
+
+		return interface_ranges
 
 
 	def setup_indicator(self,bot,indicator,param,value):
@@ -255,7 +261,17 @@ def tradebotmain():
 	interfaces = h.get_interfaces(bot, indicator.guid)[1]
 
 	print(interfaces)
-
+	ticks = 200
+	bt = h.c().customBotApi.backtest_custom_bot_on_market(
+            bot.accountId,
+            bot.guid,
+            int(ticks),
+            bot.priceMarket.primaryCurrency,
+            bot.priceMarket.secondaryCurrency,
+            bot.priceMarket.contractName,
+        )
+	print(bt.errorCode, bt.errorMessage)
+	print(bt.result)
 
 if __name__ == '__main__':
 	tradebotmain()

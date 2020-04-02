@@ -81,7 +81,7 @@ def get_market_data(bot):
 	else:
 		print(market_history_request.errorCode, market_history_request.errorMessage)
 		print('things did not go as planned. aborting')
-	
+
 def to_df(market_history):
 
 	market_data = [{'timeStamp':x.timeStamp,'unixTimeStamp':pd.to_datetime(x.unixTimeStamp,unit='s'),'open':x.open,'highValue':x.highValue, 'lowValue':x.lowValue,'close':x.close,'volume':x.volume,'currentBuyValue':x.currentBuyValue,'currentSellValue':x.currentSellValue} for x in market_history]
@@ -135,7 +135,7 @@ def orders_to_df(bot):
 
 
 def combine_orders_with_history(df, orders_df):
-	#does what it says - combines into a single dataframe orders and history for future use. 
+	#does what it says - combines into a single dataframe orders and history for future use.
 	history_with_orders = pd.merge(df,orders_df,how = 'left', on = 'unixTimeStamp')
 	# history_with_orders['unixTimeStamp'] = pd.to_datetime(history_with_orders['unixTimeStamp'])
 
@@ -144,7 +144,7 @@ def combine_orders_with_history(df, orders_df):
 def calculate_profit_lables(orders_df):
 	print(orders_df)
 	for index, row in orders_df.iterrows():
-	
+
 			if orders_df.loc[index,'orderType'] == 0:
 				if orders_df.loc[index, 'price'] != 0:
 					orders_df.loc[index,'profit'] = orders_df.loc[index, 'price'] + orders_df.loc[str(int(index) - 1), 'price']
@@ -160,7 +160,7 @@ def calculate_profit_lables(orders_df):
 
 def plot_bot_trades(history_with_orders):
 		plt.figure()
-		history_with_orders.plot(kind='line', x = 'unixTimeStamp', y = [ 'price', 'currentBuyValue']) 
+		history_with_orders.plot(kind='line', x = 'unixTimeStamp', y = [ 'price', 'currentBuyValue'])
 		fig = go.Figure(data=[go.Candlestick(x=history_with_orders['unixTimeStamp'],
 			open=history_with_orders['open'],
 			high=history_with_orders['highValue'],
@@ -174,10 +174,10 @@ def plot_bots(botlist):
 	market_history = get_market_data(botlist[0])
 	# for bot in botlist:
 	# 	print(len(bot.completedOrders))
-	
+
 	mh_df = to_df(market_history)
 	plt.figure()
-	
+
 	mh_df.plot(kind='line', x = 'timeStamp', y = 'currentBuyValue')
 	fig = go.Figure(data=[go.Candlestick(x=
 	['timeStamp'],
@@ -193,7 +193,7 @@ def plot_bots(botlist):
 	fig.show()
 	for bot in botlist:
 		plt.figure()
-		mh_df 
+		mh_df
 
 def bot_to_plot(bot):
 	#Gets market history, turns it into data frame, then does the same for bot orders and plots it on a graph
@@ -233,14 +233,12 @@ def main():
 	print('HELLO',[x.roi for x in botlist])
 	plot_bots(botlist)
 def main8():
-	
+
 	filename = return_file()
 	csv = pd.read_csv(filename)
-	
+
 
 	print(csv)
 
 if __name__ == "__main__":
 	main()
-
-	

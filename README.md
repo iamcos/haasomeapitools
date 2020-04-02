@@ -1,27 +1,26 @@
-# haasomeapitools
+# Haasomeapi Tools
 
+These scripts build upon haasomeapi Haas api pythong wrapper written by tallented R4stl1n for Haas.
+## init.py
+Provides with basic Haasonline server conectivity commands.
+##configserver.py
+Func script to read and write to config file your server data.
+##interval.py
+Func script that reads, writes and converts dates into ticks and vice'versa.
+##botsellector.py
+Stores a Class BotSellector. Gets you specific Trade or Mad Hatter bot, or the list thereof.
+##botinterface.py
+Was my first attempt at OOP... it can do allmost everything other scripts do and it has some comments. Go check them out.
+##botdatabase.py
+Stores/reads bots from/to files
+Bruteforce markets with saved mh_bots as configs.
+Bruteforce markets with configs from a csv file.
+Stores bruteforce backtesting results in a csv.
 
-botdatabase file execution runs iteration algorithm over around 700 mad-hatter configs that are stored in csv files alongside.
-  with botdatabase is possible to load and save bots to files in json and csv or into a database.
-  
-botinterface contains a class that can be imported to any pythong script and enable basic HaasAPI integration.
+## history.py
+- retrievemarket data from Haas servers
+- Store it on disk/sql
+- Provides it in DataFrame format for data science.
+- Plot multiple trades from multiple backtests on a single graph for better analysis.
 
-Scripts to interact with Haasomeapi via the python wrapper
-
-Based on haasomeapi, are scripts that accomplish various tasks with Haas:
-
-
-
-botsellector.py is about selecting bots of every supported type as single botobject or as a list for further manipulations.
-configserver.py is responsible for writing a config file to connect to haasonline via localapi
-
-history.py allows for market data manipulation: save  it, turn it into a dataframe.
-
-init.py is basic initialisation algorithm.
-interval.py reads and writes backtesting interval and passes the number of ticks to evert backtested bot.
-
-bots.haasbots contains a set of 900 mad hatter bot configurations for you to explore.
-
-bt.ini should be put into user folder on your machine for it to initialize and launch atm.
-
-tradeBot.py contains the basic tradeBot interaction scripts.
+Usage examples are provided at the bottom of the script.
