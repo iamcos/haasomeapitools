@@ -19,9 +19,9 @@ class BotSellector:
 		return allbots
 
 	def get_all_custom_bots(self):
-		#returns all Mad-Hatter bots as list
+
 		all_custom_bots = self.c().customBotApi.get_all_custom_bots().result
-		return allmhbots
+		return all_custom_bots
 
 
 	def get_specific_bot(self,botlist):
@@ -53,7 +53,10 @@ class BotSellector:
 		bot = self.get_specific_bot(all_trade_bots)
 		return bot
 	def get_mad_hatter_bot(self):
-		pass
+		all_bots = self.get_all_custom_bots()
+		all_mh_bots = [x for x in all_bots if x.botType == 15]
+		bot = self.get_specific_bot(all_mh_bots)
+		return bot
 
 	def return_all_fcb_bots(haasomeClient):
 		#Returns all Flash-Crash Bots as list.
