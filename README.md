@@ -1,6 +1,12 @@
 # Haasomeapi Tools
 
+## UPDATE
+### Haasomeapi_example.ipynb
+Interactive example-tutorial jupyter notebook that explains every step towards bruteforcing configs solution.
+
 These scripts build upon haasomeapi Haas api pythong wrapper written by tallented R4stl1n for Haas.
+
+
 ## init.py
 Provides with basic Haasonline server conectivity commands.
 ## configserver.py
@@ -16,6 +22,7 @@ Was my first attempt at OOP... it can do allmost everything other scripts do and
 -Bruteforce markets with saved mh_bots as configs.
 -Bruteforce markets with configs from a csv file.
 -Stores bruteforce backtesting results in a csv.
+
 
 ## history.py
 - retrievemarket data from Haas servers
