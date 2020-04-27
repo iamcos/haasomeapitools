@@ -10,7 +10,9 @@ class TradeBot(Bot):
 	def __init__(self):
 		Bot.__init__(self)
 
-
+	def return_bot(self, guid):
+		bot = self.c().tradeBotApi.get_trade_bot(guid).result
+		return bot
 	def get_indicators(self,bot):
 		'''
 		returns all tradebot indicators as a list

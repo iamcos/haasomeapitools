@@ -8,6 +8,8 @@ from MarketDataClass import MarketData
 from datetime import datetime as dt
 from threading import Timer
 from sqlalchemy import create_engine
+from MarketDataClass import MarketData
+import btalib
 
 import sqlite3 as sqllite
 
@@ -97,13 +99,6 @@ def app():
                      o for o in markets_dropdown()]),
         dcc.Dropdown(id='primarycoin'),
         dcc.Dropdown(id='secondarycoin'),
-        dcc.DatePickerRange(
-        id='my-date-picker-range',
-        max_date_allowed=dt.today(),
-        initial_visible_month=dt.today(),
-        end_date=dt.today()
-    ),
-        html.Div(id='output-container-date-picker-range'),
         dcc.Graph(id = 'market-data')])
 
     @app.callback(
@@ -122,41 +117,18 @@ def app():
     def update_output_dropdown2(primarycoin, pricesource):
         pc = secondary_coin_dropdown(primarycoin, pricesource)
         return pc
-
-    @app.callback(
-        dash.dependencies.Output(
-            'output-container-date-picker-range', 'children'),
-        [dash.dependencies.Input('my-date-picker-range', 'start_date'),
-         dash.dependencies.Input('my-date-picker-range', 'end_date')])
-
-    def update_output(start_date, end_date):
-        string_prefix = 'You have selected: '
-        if start_date is not None:
-            start_date = dt.strptime(start_date.split(' ')[0], '%Y-%m-%d')
-            start_date_string = start_date.strftime('%B %d, %Y')
-            string_prefix = string_prefix + 'Start Date: ' + start_date_string + ' | '
-        if end_date is not None:
-            end_date = dt.strptime(end_date.split(' ')[0], '%Y-%m-%d')
-            end_date_string = end_date.strftime('%B %d, %Y')
-            string_prefix = string_prefix + 'End Date: ' + end_date_string
-        if len(string_prefix) == len('You have selected: '):
-            return 'Select a date to see it displayed here'
-        else:
-            ticks = start_date - end_date
-            ticks.total_seconds()/60
-            return ticks.total_seconds()/60
     @app.callback(dash.dependencies.Output(
             'market-data', 'figure'),
         [dash.dependencies.Input('pricesource', 'value'),
             dash.dependencies.Input('primarycoin', 'value'),
-            dash.dependencies.Input('secondarycoin', 'value'),
-            dash.dependencies.Input('output-container-date-picker-range', 'children')])
-    def plot_market_data( pricesource, primarycoin, secondarycoin, ticks):
-        market_data = get_market_data_via_haas(
-            str(pricesource), primarycoin, secondarycoin, 1,ticks)
+            dash.dependencies.Input('secondarycoin', 'value')])
+            # dash.dependencies.Input('output-container-date-picker-range', 'children')])
+    def plot_market_data( pricesource, primarycoin, secondarycoin):
+        market_data = MarketData().get_ticks(
+            pricesource, primarycoin, secondarycoin,1,'LASTTICKS')
         fig = go.Figure(
-            data=[go.Scatter(x=market_data.index, y=market_data.H)])
-
+            # data=[go.Scatter(x=market_data.T, y=market_data.high)])
+            data=[go.Candlestick(x=market_data.index, open=market_data.open, high=market_data.high, low=market_data.low, close=market_data.close)])
         return fig
 
 

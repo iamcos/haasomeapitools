@@ -12,7 +12,11 @@ class BotSellector:
 		ip, secret = configserver.validateserverdata()
 		haasomeClient = HaasomeClient(ip, secret)
 		return haasomeClient
+	def return_bot(self, guid):
+		bot = self.c.customBotApi.get_custom_bot(
+			guid, EnumCustomBotType.MAD_HATTER_BOT)
 
+		return bot.result
 	def get_all_trade_bots(self):
 		#Returns all Trade Bots as a list
 		allbots = self.c().tradeBotApi.get_all_trade_bots().result

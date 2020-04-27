@@ -23,8 +23,8 @@ from haasomeapi.enums.EnumMadHatterIndicators import EnumMadHatterIndicators
 from botsellector import BotSellector
 from botdatabase import BotDB
 from functools import lru_cache
-import ta
-import bt
+from time import sleep
+
 
 class MadHatterBot(Bot):
 
@@ -66,6 +66,30 @@ class MadHatterBot(Bot):
 		print(setup_bot,' Has been configured')
 		return setup_bot
 
+	def clone_bot_for_bt(self, bot,name):
+		clones = []
+
+		clone = self.c().customBotApi.clone_custom_bot(bot.accountId, bot.guid, EnumCustomBotType.MAD_HATTER_BOT, bot.name, bot.priceMarket.primaryCurrency, bot.priceMarket.secondaryCurrency, bot.priceMarket.contractName, bot.leverage).result
+
+		return clone
+	def delete_temp_bot(self, bot):
+		self.c().customBotApi.remove_custom_bot(bot.guid)
+
+	def clone_bot_for_bt2(self, bot,name):
+			clone = self.c().customBotApi.clone_custom_bot_simple(bot.accountId, bot.guid, bot.name).result
+			return clone
+	def return_bot(self, guid):
+		bot = self.c().customBotApi.get_custom_bot(
+			guid, EnumCustomBotType.MAD_HATTER_BOT)
+		if bot.result.roi == 0:
+			sleep(2)
+			bot = self.c().customBotApi.get_custom_bot(
+                            guid, EnumCustomBotType.MAD_HATTER_BOT)
+
+		# print(bot.errorCode, bot.errorMessage)
+		# print(bot.result.__dict__)
+		return bot.result
+
 	def set_safety_parameters(self,bot, config):
 		sellStep = self.c().customBotApi.set_mad_hatter_safety_parameter(
 			bot.guid, EnumMadHatterSafeties.PRICE_CHANGE_TO_SELL, config.priceChangeToSell)
@@ -103,12 +127,6 @@ class MadHatterBot(Bot):
 			0,
 				configs['bbl']
 		)
-		try:
-			if do.errorCode != EnumErrorCode.SUCCESS:
-				# pass
-				print(do.erro/rCode, do.errorMessage, 'Length')
-		except:
-			pass
 		if bot.bBands["Devup"] != configs['devup']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -116,12 +134,6 @@ class MadHatterBot(Bot):
 				1,
 				configs['devup'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-					# pass
-					print(do.errorCode, do.errorMessage, 'Devup')
-			except:
-				pass
 		if bot.bBands["Devdn"] != configs['devdn']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -129,12 +141,6 @@ class MadHatterBot(Bot):
 				2,
 				configs['devdn'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-						pass
-						print(do.errorCode, do.errorMessage, 'Devdn')
-			except:
-				pass
 		if bot.bBands["MaType"] != configs['matype']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -142,12 +148,6 @@ class MadHatterBot(Bot):
 				3,
 				configs['matype'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-					# pass
-					print(do.errorCode, do.errorMessage, 'MaType')
-			except:
-				pass
 		if bot.bBands["AllowMidSell"] != configs['allowmidsells']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -155,12 +155,6 @@ class MadHatterBot(Bot):
 				5,
 				configs['allowmidsells'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-					# pass
-					print(do.errorCode, do.errorMessage, 'AllowMidSell')
-			except:
-				pass
 		if bot.bBands["RequireFcc"] != configs['fcc']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -168,12 +162,6 @@ class MadHatterBot(Bot):
 				6,
 				configs['fcc'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-					# pass
-					print(do.errorCode, do.errorMessage, 'RequireFcc')
-			except:
-				pass
 		if bot.rsi["RsiLength"] != configs['rsil']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -181,12 +169,6 @@ class MadHatterBot(Bot):
 				0,
 				configs['rsil'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-					# pass
-					print(do.errorCode, do.errorMessage, 'RsiLength')
-			except:
-				pass
 		if bot.rsi["RsiOverbought"] != configs['rsib']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -194,12 +176,6 @@ class MadHatterBot(Bot):
 				1,
 				configs['rsib'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-					# pass
-					print(do.errorCode, do.errorMessage, 'RsiOverbought')
-			except:
-				pass
 		if bot.rsi["RsiOversold"] != configs['rsis']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -207,12 +183,6 @@ class MadHatterBot(Bot):
 				2,
 				configs['rsis'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-					# pass
-					print(do.errorCode, do.errorMessage, 'RsiOversold')
-			except:
-				pass
 		if bot.macd["MacdFast"] != configs['macdfast']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -220,12 +190,6 @@ class MadHatterBot(Bot):
 				0,
 				configs['macdfast'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-					# pass
-					print(do.errorCode, do.errorMessage, 'MacdFast')
-			except:
-				pass
 		if bot.macd["MacdSlow"] != configs['macdslow']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -233,13 +197,6 @@ class MadHatterBot(Bot):
 				1,
 				configs['macdslow'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-					# pass
-					print(do.errorCode, do.errorMessage, 'MacdSlow')
-			except:
-				pass
-
 		if bot.macd["MacdSign"] != configs['macdsign']:
 			do = self.c().customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
@@ -247,12 +204,6 @@ class MadHatterBot(Bot):
 				2,
 				configs['macdsign'],
 			)
-			try:
-				if do.errorCode != EnumErrorCode.SUCCESS:
-					# pass
-					print(do.errorCode, do.errorMessage, 'MacdSign')
-			except:
-				pass
 		if bot.interval != configs['interval']:
 			botname = str(bot.priceMarket.primaryCurrency) + str(' / ') + \
 				str(bot.priceMarket.secondaryCurrency) + str(' Roi ') + str(bot.roi)
@@ -279,13 +230,13 @@ class MadHatterBot(Bot):
 
 		else:
 			print(bot.name,' Has been configured')
-		bt = self.bt_mh(bot)
-		bot_configs['roi'][ind] = bt.roi
+		# bt = self.bt_mh(bot)
+		# bot_configs['roi'][ind] = bt.roi
 		# bot_configs['orderbook'] = self.trades_to_df(bot)
 		# resultsdf.append(bt)
-		bot_configs.sort_values(by='roi', ascending=False, inplace=True)
+		# bot_configs.sort_values(by='roi', ascending=False, inplace=True)
 		# print(bot_configs)
-		return bot_configs,bt
+		return bot_configs
 
 
 	def bt_mh(self,bot):
@@ -407,30 +358,14 @@ class MadHatterBot(Bot):
 
 	def trades_to_df(self, bot):
 		if len(bot.completedOrders) > 0:
-			# try:
-				# 'pair': (x.pair.primaryCurrency, x.pair.secondaryCurrency),
-				print(bot.completedOrders[0].__dict__)
-				completedOrders = [{'orderId': x.orderId, 'orderStatus': x.orderStatus, 'orderType': x.orderType, 'price': x.price, 'amount': x.amount,
-                                    'amountFilled': x.amountFilled, 'unixTimeStamp': pd.to_datetime(x.unixAddedTime, unit='s')} for x in bot.completedOrders]
-				orders_df = pd.DataFrame(completedOrders)
-			# except AttributeError:
-				# {'pair': None,
-				# completedOrders = [{'orderId': None,'orderStatus':None, 'orderType':None, 'price': None,'amount':None,'amountFilled':None,'unixTimeStamp':datetime.today()}for x in range(1)]
-				# orders_df = pd.DataFrame(completedOrders)
+			completedOrders = [{'orderId': x.orderId, 'orderStatus': x.orderStatus, 'orderType': x.orderType, 'price': x.price, 'amount': x.amount,
+								'amountFilled': x.amountFilled, 'date': pd.to_datetime(x.unixAddedTime, unit='s')} for x in bot.completedOrders]
+			orders_df = pd.DataFrame(completedOrders)
+			return orders_df
+
 
 		else:
 			# {'pair': None,
 			completedOrders = [{'orderId': None,'orderStatus':None, 'orderType':None, 'price': None,'amount':None,'amountFilled':None,'unixTimeStamp':datetime.today()}for x in range(1)]
 			orders_df = pd.DataFrame(completedOrders)
 		return orders_df
-
-
-
-
-
-
-
-
-bot = BotSellector().get_mad_hatter_bot()
-bf = MadHatterBot().bruteforce_rsi_corridor(bot)
-# print(result)

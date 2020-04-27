@@ -1,13 +1,9 @@
-from threading import Timer
-from threading import Thread
+
 from  botsellector import BotSellector
 import configserver
 import json
 import os
-from io import StringIO
-from time import sleep
-from pathlib import Path
-import base64, zlib, gzip
+
 # from pastebinapi import PasteBin
 from haasomeapi.enums.EnumCustomBotType import EnumCustomBotType
 import pickle
@@ -18,19 +14,25 @@ import datetime
 import pandas as pd
 from haasomeapi.enums.EnumErrorCode import EnumErrorCode
 
+
 import time
 from haasomeapi.enums.EnumPriceSource import EnumPriceSource
 from haasomeapi.HaasomeClient import HaasomeClient
 from haasomeapi.enums.EnumMadHatterSafeties import EnumMadHatterSafeties
 from haasomeapi.enums.EnumMadHatterIndicators import EnumMadHatterIndicators
 
-ip, secret = configserver.validateserverdata()
-haasomeClient = HaasomeClient(ip, secret)
+
 
 
 class BotDB:
 	def __init__(self):
-		self = self
+		self.c = self.cnt()
+
+	def cnt(self):
+		ip, secret = configserver.validateserverdata()
+		haasomeClient = HaasomeClient(ip, secret)
+		return haasomeClient
+
 
 	def get_haasbots_file(self):
 		#Returns bot-containing list of files from home folder
@@ -75,7 +77,7 @@ class BotDB:
 				i.secondaryCurrency,
 				i,
 			)
-			for i in haasomeClient.marketDataApi.get_all_price_markets().result
+			for i in self.c.marketDataApi.get_all_price_markets().result
 		]
 
 		df = pd.DataFrame(
@@ -96,8 +98,8 @@ class BotDB:
 		return obj[0][3]
 
 	def iterate_over_market_coinpairs(self):
-		botlist = BotSellector().return_all_mh_bots(haasomeClient)
-		bot = BotSellector().get_mad_hatter_bot(haasomeClient, botlist)
+		botlist = BotSellector().return_all_mh_bots(self.c)
+		bot = BotSellector().get_mad_hatter_bot(self.c, botlist)
 		configs = self.csv_to_dataframe()
 		markets = self.get_all_markets()
 		selected_market = ''
@@ -123,7 +125,7 @@ class BotDB:
 
 				except:
 					pass
-				change_coin = haasomeClient.customBotApi.setup_mad_hatter_bot(
+				change_coin = self.c.customBotApi.setup_mad_hatter_bot(
                                     botName=bot.name,
                                     botGuid=bot.guid,
                                     accountGuid=bot.accountId,
@@ -150,6 +152,7 @@ class BotDB:
 
 			results.sort_values(by='roi', ascending=False, inplace=True)
 			BotDB().dataframe_to_csv(bot, results)
+			self.save_configs_for_same_bot_to_file(results.botobject)
 
 
 	def return_single_bot_files(self):
@@ -187,24 +190,22 @@ class BotDB:
 		#Saves given botlist to a file
 		# botlist = sorted(botlist, key=lambda x: x.roi, reverse=True)
 		print('Saving all the bots to a file')
-		t = datetime.datetime.today()
+
 		frozenbotlist = []
 		filename = str(botlist[0].priceMarket.primaryCurrency) + \
 			''+str(botlist[0].priceMarket.secondaryCurrency)+ '.haasbots'
-		# filename = str(t.strftime("%b %d %y ")+' '+str(botlist[0].priceMarket.primaryCurrency)+''+str(botlist[0].priceMarket.secondaryCurrency)+' '+str(len(botlist))+'bots,ROI:'+str(botlist[0].roi)+' .haasbots')
-		# filename = f'{(botlist[0].guid)}.haasbots'
 		try:
 			bots = self.load_botlist(filename)
-			for bot in bots:
-			 frozenbotlist = jsonpickle.encode(bot)
-		except Exception as e:
-		   print(e)
+			for bott in bots:
+			 frozenbotlist.append(jsonpickle.encode(bott))
+		except:
+		 pass
 
 		currentfile = Path(str(filename))
 		currentfile.touch(exist_ok=True)
 
 		for bot in botlist:
-			print(bot)
+			# print(bot)
 			frozenbotlist.append(jsonpickle.encode(bot))
 
 
@@ -287,7 +288,7 @@ class BotDB:
 
 
 	def create_new_trade_bot(newbot, example_bot):
-		new = haasomeClient.tradeBotApi.new_trade_bot(
+		new = self.c.tradeBotApi.new_trade_bot(
 			example_bot.accountId,
 			"imported " + newbot.name,
 			newbot.priceMarket.primaryCurrency,
@@ -302,13 +303,13 @@ class BotDB:
 		return newr
 
 	def set_safety_parameters(newbot, example_bot):
-		sellStep = haasomeClient.customBotApi.set_mad_hatter_safety_parameter(
+		sellStep = self.c.customBotApi.set_mad_hatter_safety_parameter(
 			newbot.guid, EnumMadHatterSafeties.PRICE_CHANGE_TO_SELL, example_bot.priceChangeToSell)
 		print(sellStep.errorCode,sellStep.errorMessage)
-		buyStep = haasomeClient.customBotApi.set_mad_hatter_safety_parameter(
+		buyStep = self.c.customBotApi.set_mad_hatter_safety_parameter(
 			newbot.guid, EnumMadHatterSafeties.PRICE_CHANGE_TO_BUY, example_bot.priceChangeToBuy)
 		print(buyStep.errorCode,buyStep.errorMessage)
-		stopLoss = haasomeClient.customBotApi.set_mad_hatter_safety_parameter(
+		stopLoss = self.c.customBotApi.set_mad_hatter_safety_parameter(
 			newbot.guid, EnumMadHatterSafeties.STOP_LOSS, example_bot.stopLoss)
 		print(stopLoss.errorCode,stopLoss.errorMessage)
 
@@ -372,7 +373,7 @@ class BotDB:
 	def make_ma_dict(self, bot):
 		ma = {}
 		for x in range(8):
-			do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+			do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.BBANDS,
 				3,
@@ -392,6 +393,7 @@ class BotDB:
 		if uip == '1':
 			results = self.setup(bot, configs)
 			BotDB().dataframe_to_csv(bot, results)
+
 			results.sort_values(by='roi', ascending=False, inplace=True)
 			results = self.user_selected_bot_config(bot, results)
 		elif uip == '2':
@@ -434,14 +436,14 @@ class BotDB:
 		configs['roi'][int(ind)] = bt.roi
 		configs['trades'][int(ind)] = len(bt.completedOrders)
 		configs.sort_values(by='roi', ascending=False, inplace=True)
-		BotDB().dataframe_to_csv(bot, configs)
+		self.dataframe_to_csv(bot, configs)
 		print(configs.head(20))
 		return configs
 
 	def bt_mh(self, bot, configs, ind):
 
 		ticks = iiv.total_ticks()
-		bt = haasomeClient.customBotApi.backtest_custom_bot_on_market(
+		bt = self.c.customBotApi.backtest_custom_bot_on_market(
 			bot.accountId,
 			bot.guid,
 			int(ticks),
@@ -453,13 +455,13 @@ class BotDB:
 		configs['trades'][int(ind)] = len(bt.completedOrders)
 		configs.sort_values(
 			by='roi', ascending=False, inplace=True)
-		BotDB().dataframe_to_csv(bot, configs)
+		# self.save_configs_for_same_bot_to_file(bt)
 		print(configs.head(20))
 		return configs
 
 	def setup_bot(self,bot,configs,ind):
 			if bot.bBands["Length"] != configs['bbl'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.BBANDS,
 				0,
@@ -467,7 +469,7 @@ class BotDB:
 			)
 
 			if bot.bBands["Devup"] != configs['devup'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 					bot.guid,
 					EnumMadHatterIndicators.BBANDS,
 					1,
@@ -476,7 +478,7 @@ class BotDB:
 
 
 			if bot.bBands["Devdn"] != configs['devdn'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.BBANDS,
 				2,
@@ -485,7 +487,7 @@ class BotDB:
 
 
 			if bot.bBands["MaType"] != configs['matype'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.BBANDS,
 				3,
@@ -494,7 +496,7 @@ class BotDB:
 
 
 			if bot.bBands["AllowMidSell"] != configs['allowmidsells'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.BBANDS,
 				5,
@@ -503,7 +505,7 @@ class BotDB:
 
 
 			if bot.bBands["RequireFcc"] != configs['fcc'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.BBANDS,
 				6,
@@ -512,7 +514,7 @@ class BotDB:
 
 
 			if bot.rsi["RsiLength"] != configs['rsil'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.RSI,
 				0,
@@ -521,7 +523,7 @@ class BotDB:
 
 
 			if bot.rsi["RsiOverbought"] != configs['rsib'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.RSI,
 				1,
@@ -530,7 +532,7 @@ class BotDB:
 
 
 			if bot.rsi["RsiOversold"] != configs['rsis'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.RSI,
 				2,
@@ -539,7 +541,7 @@ class BotDB:
 
 
 			if bot.macd["MacdFast"] != configs['macdfast'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.MACD,
 				0,
@@ -547,7 +549,7 @@ class BotDB:
 				)
 
 			if bot.macd["MacdSlow"] != configs['macdslow'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.MACD,
 				1,
@@ -556,7 +558,7 @@ class BotDB:
 
 
 			if bot.macd["MacdSign"] != configs['macdsign'][int(ind)]:
-				do = haasomeClient.customBotApi.set_mad_hatter_indicator_parameter(
+				do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
 				bot.guid,
 				EnumMadHatterIndicators.MACD,
 				2,
@@ -565,7 +567,7 @@ class BotDB:
 
 
 			if bot.interval != configs['interval'][int(ind)]:
-				setup_bot = haasomeClient.customBotApi.setup_mad_hatter_bot(
+				setup_bot = self.c.customBotApi.setup_mad_hatter_bot(
 				botName = bot.name,
 				botGuid=bot.guid,
 				accountGuid=bot.accountId,
@@ -592,7 +594,7 @@ class BotDB:
 	def bt_mh_visible_roi(self, current_bot):
 
 		ticks = iiv.total_ticks()
-		bt = haasomeClient.customBotApi.backtest_custom_bot(
+		bt = self.c.customBotApi.backtest_custom_bot(
 			current_bot.guid,
 			int(ticks),
 		)
@@ -610,36 +612,12 @@ class BotDB:
 
 	def dataframe_to_csv(self, bot, df):
 		filename = f'{EnumPriceSource(bot.priceMarket.priceSource).name},{bot.priceMarket.primaryCurrency},{bot.priceMarket.secondaryCurrency}.csv'
-		df.to_csv(filename )
+		df.to_csv(filename)
+		# self.save_configs_for_same_bot_to_file(df.botobject)
 		print("Configs saved to csv for given mrket and pair")
 	def setup_bot_from_csv(self, bot, csv):
 		csv = sealf.get_csv_file()
 
-	def jsavebots(botlist, file):
-		frozenobjlist = []
-		for i, bot in enumerate(botlist):
-			frozen = json.dumps(bot)
-			frozenobjlist.append(frozen)
-		with open(file, "w") as f:
-			json.dump(frozenobjlist, f)
-
-
-	def jloadbots(file):
-		with open(file, "r") as f:
-			bots = json.load(f)
-			return bots
-
-
-	def print_keys(kl):
-		if kl == i.bBands.keys():
-			for key in kl:
-				print("config.bBands['" + key + "']")
-		if kl == i.macd.keys():
-			for key in kl:
-				print("config.macd['" + key + "']")
-		if kl == i.rsi.keys():
-			for key in kl:
-				print("config.rsi['" + key + "']")
 
 	def set_csv_config(self, bot,configs):
 		done = self.user_selected_bot_config(bot, configs)
@@ -658,7 +636,7 @@ class BotDB:
 
 # def main3():
 
-#     bot = BotSellector().getallbots(haasomeClient)
+#     bot = BotSellector().getallbots(self.c)
 #     print(
 #         "This is a simple script that uses a single file named bot.json for easy storage and sharing of Custom bots and Trade Bots. Its simple: select a bot to save, select save - bot saved to bot.json file. On another machine, select example bot, hit load bot and the bot will be recreated based on example bot account data."
 #     )
@@ -675,7 +653,7 @@ class BotDB:
 #         botstr = BotDB.load_bot_from_file()
 #         bot2 = create_new_custom_bot(botstr, bot)
 
-#     # bot = BotSellector().getallbots(haasomeClient)
+#     # bot = BotSellector().getallbots(self.c)
 #     # string =	bot_to_string(bot)
 #     # bot2 = make_bot_from_string(string)
 	# print(bot2.botType)
@@ -685,7 +663,7 @@ def ma_main():
 	bot =BotSellector().get_mad_hatter_bot()
 	BotDB().make_ma_dict(bot)
 def main2():
-	botlist = BotSellector().return_all_mh_bots(haasomeClient)
+	botlist = BotSellector().return_all_mh_bots(self.c)
 	configs = BotDB.all_mh_configs_to_csv(botlist)
 
 def iterate_main():
@@ -701,9 +679,9 @@ def iterate_main():
 	results = BotDB().iterate_df_configs()
 
 def main1():
-	botlist = BotSellector().return_all_mh_bots(haasomeClient)
+	botlist = BotSellector().return_all_mh_bots(self.c)
 
-	bot = BotSellector().get_mad_hatter_bot(haasomeClient,botlist)
+	bot = BotSellector().get_mad_hatter_bot(self.c,botlist)
 	db_file = BotDB.get_haasbots_file()
 	# print(db_file)
 
@@ -730,7 +708,7 @@ def main1():
 #     # db_file = BotDB.get_haasbots_file()
 #     bots_from_file = BotDB.load_botlist(db_file)
 #     bot = BotDB.return_bot_from_bot_list(bots_from_file)
-#     ebot = BotSellector().get_mh_bot(haasomeClient)
+#     ebot = BotSellector().get_mh_bot(self.c)
 #     newbot = BotDB.create_new_custom_bot(bot,ebot)
 
 # def main3():

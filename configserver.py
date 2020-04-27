@@ -91,7 +91,8 @@ def set_bt2():
 
 def set_bt():
 
-    response = input('write date and time to start backtest from in the following format 1/11/19 16:30: ')
+    response = input(
+        f'Type date and time in the following format to set as the begining of backtesting: {datetime.today().strftime("%d/%m/%y %H:%M")} ')
     dt = datetime.strptime(response, "%d/%m/%y %H:%M")
     # tt = dt.timetuple()
     print('Backtesting will now start from ',dt)
