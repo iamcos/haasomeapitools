@@ -1,13 +1,12 @@
-[![Run on Repl.it](https://repl.it/badge/github/iamcos/haasomeapitools)](https://repl.it/github/iamcos/haasomeapitools)
+
 # Haasomeapi Tools
 
 ## UPDATE
 ### Haasomeapi_example.ipynb
-Interactive example-tutorial jupyter notebook that explains every step towards bruteforcing configs solution.
+Interactive example-tutorial jupyter notebook with interactive code examples that generate dropdown menus for bots and files. WIP
 
-These scripts build upon haasomeapi Haas api pythong wrapper written by tallented R4stl1n for Haas.
-
-
+## selenium_multi_backtest.py
+Behold! Selenium driver is required for this to work. In current verson it creates multiple clones via api, configures them whilst another scrip instance logins via browser and uses backtesting Remote to quickly trigger it for multiple bots at a time.
 ## init.py
 Provides with basic Haasonline server conectivity commands.
 ## configserver.py
