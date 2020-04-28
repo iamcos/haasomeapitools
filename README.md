@@ -1,3 +1,4 @@
+[![Run on Repl.it](https://repl.it/badge/github/iamcos/haasomeapitools)](https://repl.it/github/iamcos/haasomeapitools)
 # Haasomeapi Tools
 
 These scripts build upon haasomeapi Haas api pythong wrapper written by tallented R4stl1n for Haas.
