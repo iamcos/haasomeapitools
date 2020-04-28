@@ -1,3 +1,4 @@
+[![Run on Repl.it](https://repl.it/badge/github/iamcos/haasomeapitools)](https://repl.it/github/iamcos/haasomeapitools)
 # Haasomeapi Tools
 
 ## UPDATE
