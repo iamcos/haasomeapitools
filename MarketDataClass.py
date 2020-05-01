@@ -34,6 +34,10 @@ class MarketData(Haas):
 			print(df)
 			return df
 
+	def empty_market_data_df(self):
+		market_history = {'date': '', 'open':'','high':'','low':'', 'close':'','buy':'', 'sell':'', 'volume':''}
+		df = pd.DataFrame(market_history,index=([""]))
+		return df
 
 	def to_df_for_ta(self, market_history):
 
@@ -84,8 +88,8 @@ class MarketData(Haas):
 
 		obj = df[df["pricesource"] == pricesource][df["primarycurrency"]
                                              == primarycoin][df["secondarycurrency"] == secondarycoin].values
-		print(obj)
-		print(obj[0][3])
+		print('obj',obj)
+		print('obj1', obj[0][3])
 		return obj[0][3]
 
 	def db_table(self):
@@ -143,3 +147,11 @@ class MarketData(Haas):
 			x)} for x in pairs.secondarycurrency.unique()]
 		# print(secondary_coin_dropdown)
 		return secondary_coin_dropdown
+
+	def get_last_minute_ticker(self, marketobj):
+		ticker = self.c().marketDataApi.get_minute_price_ticker_from_market(marketobj)
+		df = self.to_df_for_ta(ticker.result)
+		return df
+
+
+print(MarketData().empty_market_data_df().head())
