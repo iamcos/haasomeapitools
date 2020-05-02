@@ -196,3 +196,4 @@ quantmod/chart.py
 quantmod/auth.py
 quantmod/__init__.py
 IndicatorsClass.py
+botconfigs.csv

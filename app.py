@@ -1,3 +1,4 @@
+import pandas as pd
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -10,11 +11,12 @@ from threading import Timer
 from sqlalchemy import create_engine
 from MarketDataClass import MarketData
 from botsellector import BotSellector
-# import btalib
+import btalib
 import dash_bootstrap_components as dbc
 from collections import deque
 from haasomeapi.enums.EnumPriceSource import EnumPriceSource
 import jsonpickle
+import json
 
 
 import sqlite3 as sqllite
@@ -89,6 +91,14 @@ def get_market_data_via_haas( pricesource,primarycoin,secondarycoin, interval,de
 
     return market_data
 
+import btalib
+def get_indicators():
+    indicators = btalib.indicator.get_ind_by_name()
+    # indicatorss = [[i.alias[-1], i] for i in indicators]
+    # help(indicators[0])
+    indicators_dropdown = [{'label':str(key),'value': str(key)} for key,value in indicators.items()]
+    return indicators_dropdown
+
 
 def markets_dropdown():
     h = MarketData()
@@ -119,15 +129,23 @@ def secondary_coin_dropdown(primarycoin, pricesource):
 market_viz = html.Div(
     [
         html.Div(id='market-object', style={'display': 'none'}),
-        dbc.Row(dbc.Col(dcc.Dropdown(id='pricesource', options=[
-                                     o for o in markets_dropdown()], value="BINANCE"), width=2)),
         dbc.Row(
             [
+                dbc.Col(dcc.Dropdown(id='pricesource', options=[
+                                     o for o in markets_dropdown()], value="BINANCE"), width=2),
                 dbc.Col(dcc.Dropdown(id='primarycoin', value='ADA'),width =2),
                 dbc.Col(dcc.Dropdown(id='secondarycoin', value='BTC'),width =2)
             ]
                 ),
+        dbc.Row([dbc.Col(html.Div(id='coin-name'), style={'display': 'none'}),
+                 dbc.Col(html.Div(id='indicator-data'),
+                         style={'display': 'none'}),
+                 dbc.Col(html.Div(id='market-data-df'),
+                         style={'display': 'none'}),
+
+                 ]),
         dbc.Row(dbc.Col(dcc.Graph(id='market-data'))),
+        dbc.Row(dbc.Col(dcc.Dropdown(id='indicators', options=get_indicators()))),
         dbc.Row(
             [
                 dbc.Col(dcc.Dropdown(id='botlist'	, options=[
@@ -177,6 +195,34 @@ def app():
         market_obj = md.return_priceMarket_object(pricesource, primarycoin, secondarycoin)
         frozen = jsonpickle.encode(market_obj)
         return frozen
+    @app.callback(Output('coin-name','children'),[Input("market-object",'children')])
+    def update_coin_name(marketobj):
+        market = mo['displayName'].split(" ")
+        print(market)
+        coin1, coin2 = pair.split('/')
+        return market, coin1, coin2
+
+    @app.callback(Output('indicator-data', 'children'), [Input('indicators', 'value'), Input('coin-name', 'children')])
+    def make_indicator_plot(indicator,coin):
+        md = MarketData()
+        market, coin1, coin2 = coin
+        # market_obj = md.return_priceMarket_object()
+
+        market_data = md.get_ticks(market, coin1, coin2, 1, 'LASTTICKS')
+
+        # indicator = jsonpickle.decode(indicator)
+        indic = btalib.indicator.get_ind_by_name()
+        # print(indic.__dict__)
+        # print(indic)
+        itis = indic[indicator](market_data)
+        for i in itis:
+            print(i.__dict__)
+        print(itis)
+
+        # return indicator(market_data).df
+        # print('IND', indicator.df)
+
+
 
 
     @app.callback(
@@ -195,27 +241,30 @@ def app():
     def update_output_dropdown2(primarycoin, pricesource):
         pc = secondary_coin_dropdown(primarycoin, pricesource)
         return pc
+
     @app.callback(Output(
-            'market-data', 'figure'),
-            # [Input('pricesource', 'value'),
-            # Input('primarycoin', 'value'),
-            # Input('secondarycoin', 'value')])
-            [Input('market-object','children')])
-            # dash.dependencies.Input('output-container-date-picker-range', 'children')])
+        'market-data-df', 'children'),
+        # [Input('pricesource', 'value'),
+        # Input('primarycoin', 'value'),
+        # Input('secondarycoin', 'value')])
+        [Input('market-object', 'children')])
 
-    def plot_market_data( frozen):
-        market_object = jsonpickle.decode(frozen)
-        print(EnumPriceSource(market_object.priceSource).name, market_object.primaryCurrency, market_object.secondaryCurrency)
-        market_data = MarketData().get_ticks(
-            EnumPriceSource(market_object.priceSource).name, market_object.primaryCurrency, market_object.secondaryCurrency, 1, 'LASTTICKS')
+    def get_market_Data(frozen):
+            market_object = jsonpickle.decode(frozen)
 
+            market_data = MarketData().get_ticks(
+                EnumPriceSource(market_object.priceSource).name, market_object.primaryCurrency, market_object.secondaryCurrency, 1, 'LASTTICKS')
+            frozen = market_data.to_json()
+            return frozen
+
+    @app.callback(Output('market-data', 'figure'), [Input('market-data-df', 'children')])
+    def plot(frozen):
+        market_data =  pd.read_json(frozen)
         fig = go.Figure(
             # data=[go.Scatter(x=market_data.T, y=market_data.high)])
             data=[go.Candlestick(x=market_data.index, open=market_data.open, high=market_data.high, low=market_data.low, close=market_data.close)])
         # print(f" FIGURE DICTIONARY \n {fig.__dict__}")
         return fig
-
-
 
     return app
 
