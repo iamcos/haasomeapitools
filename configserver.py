@@ -45,18 +45,18 @@ def validateserverdata():
         logindata = config["SERVER DATA"]
         ipport = logindata.get("server_address")
         secret = logindata.get("secret")
-        print(ipport, secret)
+        # print(ipport, secret)
         haasomeClient = HaasomeClient(ipport, secret)
         if haasomeClient.test_credentials().errorCode != EnumErrorCode.SUCCESS:
-            print("\n\n\n\n\n\n\n\n")
+            # print("\n\n\n\n\n\n\n\n")
             print(haasomeClient.test_credentials().errorMessage)
             print(
                 "\nHave you enabled Local API in Haasonline Server Settings? \nIMPORTANT: IP, PORT should have the same data as here, secret must show dots. \nIf there are no dots in Secret, input them and hit SAVE button at the bottom of the page. \n"
             )
             serverdata()
         else:
-            print("\n\n\n\n\n\n\n\n")
-            print("Sucessfully connected to HaasOnline!")
+            # print("\n\n\n\n\n\n\n\n")
+            # print("Sucessfully connected to HaasOnline!")
             return ipport, secret
     except KeyError:
         serverdata()
@@ -86,12 +86,13 @@ def set_bt2():
         config["BT"] = {"year": year, "month": month, "day": day, 'hour':hour, 'minute':minute}
         with open("bt.ini", "w") as configfile:
             config.write(configfile)
-    else: 
+    else:
         pass
 
 def set_bt():
 
-    response = input('write date and time to start backtest from in the following format 1/11/19 16:30: ')
+    response = input(
+        f'Type date and time in the following format to set as the begining of backtesting: {datetime.today().strftime("%d/%m/%y %H:%M")} ')
     dt = datetime.strptime(response, "%d/%m/%y %H:%M")
     # tt = dt.timetuple()
     print('Backtesting will now start from ',dt)
@@ -103,8 +104,8 @@ def set_bt():
     return dt
 
 
-  
-   
+
+
 
 
 
@@ -118,7 +119,7 @@ def read_bt():
         set_bt()
     try:
         dd = config["BT"]
-        
+
     except KeyError:
         currentfile = Path(str("bt.ini"))
         currentfile.touch(exist_ok=True)

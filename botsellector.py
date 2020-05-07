@@ -12,16 +12,20 @@ class BotSellector:
 		ip, secret = configserver.validateserverdata()
 		haasomeClient = HaasomeClient(ip, secret)
 		return haasomeClient
+	def return_bot(self, guid):
+		bot = self.c.customBotApi.get_custom_bot(
+			guid, EnumCustomBotType.MAD_HATTER_BOT)
 
+		return bot.result
 	def get_all_trade_bots(self):
 		#Returns all Trade Bots as a list
 		allbots = self.c().tradeBotApi.get_all_trade_bots().result
 		return allbots
 
 	def get_all_custom_bots(self):
-		#returns all Mad-Hatter bots as list
+
 		all_custom_bots = self.c().customBotApi.get_all_custom_bots().result
-		return allmhbots
+		return all_custom_bots
 
 
 	def get_specific_bot(self,botlist):
@@ -53,7 +57,10 @@ class BotSellector:
 		bot = self.get_specific_bot(all_trade_bots)
 		return bot
 	def get_mad_hatter_bot(self):
-		pass
+		all_bots = self.get_all_custom_bots()
+		all_mh_bots = [x for x in all_bots if x.botType == 15]
+		bot = self.get_specific_bot(all_mh_bots)
+		return bot
 
 	def return_all_fcb_bots(haasomeClient):
 		#Returns all Flash-Crash Bots as list.

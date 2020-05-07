@@ -87,14 +87,14 @@ def new_bot_for_every_indicator(haasomeClient, bot, interval):
 
 
 def get_indicators(bot):
-    #returns all tradebot indicators 
+    #returns all tradebot indicators
     indicators = {}
     for indicator in bot.indicators:
         indicators[bot.indicators[indicator].indicatorTypeShortName] = indicator
     return indicators
 
 def select_indicator(indicators):
-    #returns user selected indicator of a trade bot 
+    #returns user selected indicator of a trade bot
     keys = list(indicators.keys())
     print(indicators.keys())
     for i, indicator in enumerate(keys):
@@ -131,9 +131,9 @@ def select_interface(bot, interfaces):
 def add_indicator(bot, indicator):
     try:
         add = haasomeClient.tradeBotApi.add_indicator(bot.guid, indicator)
-        # print(add.errorCode, add.errorMessage)
+
         print(add.errorCode, add.errorMessage)
-        try: 
+        try:
             print(EnumIndicator.EnumIndicator(indicator))
         except:
             print('something didnt work out')
@@ -147,10 +147,10 @@ def get_indicator_interfaces_for_df(bot):
 	indicator_ranges_by_name ={}
 	interface_ranges_by_name = {}
 	indicators_with_ranges = {}
-	
+
 
 	dataframes = {}
-	
+
 
 	for ii, v in enumerate(bot.indicators):
 		interfaces ={}
@@ -214,7 +214,7 @@ def config_indicators(bot):
 
 
 
-    
+
 
 if __name__ == "__main__":
     # add_all_indicators_to_bot()
