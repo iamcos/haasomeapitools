@@ -1,6 +1,13 @@
 
 # Haasomeapi Tools
 
+## Installation
+
+1. Copy config.ini.example to config.ini
+2. Update the server_address and secret with your Haas Trade Server Local API
+3. Install Python
+
+These scripts build upon haasomeapi Haas api pythong wrapper written by tallented R4stl1n for Haas.
 ## UPDATE
 ### Haasomeapi_example.ipynb
 Interactive example-tutorial jupyter notebook with interactive code examples that generate dropdown menus for bots and files. WIP
@@ -31,3 +38,5 @@ Was my first attempt at OOP... it can do allmost everything other scripts do and
 - Plot multiple trades from multiple backtests on a single graph for better analysis.
 
 Usage examples are provided at the bottom of the script.
+
+
