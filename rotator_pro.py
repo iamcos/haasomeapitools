@@ -11,9 +11,7 @@ from haasomeapi.dataobjects.marketdata.Market import Market
 from haasomeapi.dataobjects.util.HaasomeClientResponse import \
     HaasomeClientResponse
 from haasomeapi.enums.EnumErrorCode import EnumErrorCode
-from haasomeapi.enums.EnumMadHatterIndicators import EnumMadHatterIndicators
-from haasomeapi.enums.EnumMadHatterSafeties import EnumMadHatterSafeties
-from haasomeapi.HaasomeClient import HaasomeClient
+meapi.HaasomeClient import HaasomeClient
 import configserver
 import history
 import init

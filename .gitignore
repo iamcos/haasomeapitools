@@ -1,3 +1,4 @@
+.trash
 BotConfigs
 .DS_Store
 .macenv
@@ -197,3 +198,18 @@ quantmod/auth.py
 quantmod/__init__.py
 IndicatorsClass.py
 botconfigs.csv
+bt123.py
+btalib2.py
+deepai.py
+export.html
+log_file
+BINANCE,ADA,BNB.csv
+.replit
+marketscsv.py
+me.jpg
+premut.py
+savehistory_old.py
+temp.py
+vid_scripts.py
+widget_syling.ipynb
+widgetsexample.ipynb

@@ -69,24 +69,7 @@ class BotDB:
 		return configs
 
 	def get_all_markets(self):
-
-		markets = [
-			(
-				EnumPriceSource(i.priceSource).name,
-				i.primaryCurrency,
-				i.secondaryCurrency,
-				i,
-			)
-			for i in self.c.marketDataApi.get_all_price_markets().result
-		]
-
-		df = pd.DataFrame(
-			markets,
-			columns=(["pricesource", "primarycurrency",
-							"secondarycurrency", "obj"]),
-		)
-		return df
-
+		pass
 	def return_priceMarket_object(self, df, pricesource, primarycoin, secondarycoin):
 		'''
 			Returns priceSource object for given pricesorce, primarycoin, secondarycoin if that pricesource is enabled in Haas.

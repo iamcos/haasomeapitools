@@ -118,7 +118,7 @@ def app():
 		html.Label('Dropdown'),
 		dcc.Dropdown(id='botlist'	, options=[
 					 o for o in custom_bots_dropdown()]),
-		dcc.Graph(id='market-data'])
+		dcc.Graph(id='market-data')])
 
 	@app.callback(
 		Output('market-data', 'figure'),

@@ -192,8 +192,7 @@ def apply_config_to_interface(config):
     macdslow.clear()
     macdslow.send_keys(str(config['macdslow']))
 
-    macdsign = driver.find_element_by_xpath
-        "//div[@id='MadHatterMacd']//div[3]//div[2]//input[1]")
+    macdsign = driver.find_element_by_xpath("//div[@id='MadHatterMacd']//div[3]//div[2]//input[1]")
     macdsign.click()
     macdsign.clear()
     macdsign.send_keys(str(config['macdsign']))
@@ -261,11 +260,11 @@ def main():
     p = l
     driver = webdriver.Chrome()
     driver2 = webdriver.Remote(command_executor=the_known_url)
-    f driver2.session_id != the_known_session_id:   # this is pretty much guaranteed to be the case
+    if driver2.session_id != the_known_session_id:   # this is pretty much guaranteed to be the case
         # this closes the session's window - it is currently the only one, thus the session itself will be auto-killed, yet:
-    driver2.close()
-    driver2.quit()
-    login_do(driver, WebDriverWait, 1, 1)
+        driver2.close()
+        driver2.quit()
+        login_do(driver, WebDriverWait, 1, 1)
     try:
         done_chunks = config_bt_bot(driver, webdriver, chunk, bot)
     except Exception as e:

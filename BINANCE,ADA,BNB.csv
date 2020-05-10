@@ -1,3 +1,0 @@
-index,interval,signalconsensus,fcc,resetmiddle,allowmidsells,matype,rsil,rsib,rsis,bbl,devup,devdn,macdfast,macdslow,macdsign,trades,roi
-0,5,False,False,True,False,4,6,34.0,65.0,32,0.5,0.8,12,24,5,1.0,-0.1023
-1,5,False,True,True,False,2,11,2.0,95.0,35,1.0,1.0,20,40,8,1.0,-0.1023

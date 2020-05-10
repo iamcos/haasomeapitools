@@ -2,7 +2,7 @@ from BaseHaas import Haas, Bot
 from functools import lru_cache
 from haasomeapi.enums.EnumErrorCode import EnumErrorCode
 from botsellector import BotSellector
-from IndicatorsClass import IndicatorConfiguations as ic
+
 from haasomeapi.enums.EnumIndicator import EnumIndicator
 import pandas as pd
 class TradeBot(Bot):
