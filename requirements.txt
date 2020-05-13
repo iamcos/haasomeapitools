@@ -139,3 +139,5 @@ Werkzeug==1.0.0
 widgetsnbextension==3.5.1
 yarl==1.4.2
 zipp==0.6.0
+limits
+ipykernel

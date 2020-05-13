@@ -25,7 +25,7 @@ from botsellector import BotSellector
 from botdatabase import BotDB
 from functools import lru_cache
 from time import sleep
-
+import timeit
 
 class MadHatterBot(Bot):
 
@@ -82,10 +82,7 @@ class MadHatterBot(Bot):
     def return_bot(self, guid):
         bot = self.c().customBotApi.get_custom_bot(
             guid, EnumCustomBotType.MAD_HATTER_BOT)
-        if bot.result.roi == 0:
-            sleep(2)
-            bot = self.c().customBotApi.get_custom_bot(
-                            guid, EnumCustomBotType.MAD_HATTER_BOT)
+
 
         # print(bot.errorCode, bot.errorMessage)
         # print(bot.result.__dict__)
@@ -385,9 +382,10 @@ class MadHatterBot(Bot):
 
 
     @sleep_and_retry
-    @limits(calls=5, period=3)
+    @limits(calls=4, period=3)
+
     def identify_which_bot(self, ticks):
-        results = []
+        # results = []
         botlist = self.return_botlist()
         try:
             while True:
@@ -407,7 +405,7 @@ class MadHatterBot(Bot):
         except KeyboardInterrupt:
             return results
     @sleep_and_retry
-    @limits(calls=2, period=1)
+    @limits(calls=3, period=2)
     def bt_mh_on_update(self, bot, ticks):
 
         bt = self.c().customBotApi.backtest_custom_bot(
