@@ -300,7 +300,7 @@ class BotDB:
 		file = self.get_csv_file()
 
 
-	def all_mh_configs_to_csv(botlist):
+	def all_mh_configs_to_csv(self,botlist):
 		filename = str(datetime.datetime.today())+' '+str(len(botlist))+' Mad-Hatter-Bots.csv'
 		with open(filename, "w", newline="") as csvfile:
 			fieldnames = [
@@ -322,6 +322,7 @@ class BotDB:
 				"macdfast",
 				"macdslow",
 				"macdsign",
+				"roi"
 			]
 			csvwriter = csv.DictWriter(csvfile, fieldnames=fieldnames)
 			csvwriter.writeheader()
@@ -346,12 +347,14 @@ class BotDB:
 						"macdfast": str(bot.macd["MacdFast"]),
 						"macdslow": str(bot.macd["MacdSlow"]),
 						"macdsign": str(bot.macd["MacdSign"]),
+						"roi":str(bot.roi)
 					}
 				)
 
 			print(
 				"All Bots have been sucessfully saved to a file in same folder as this app."
 			)
+		return filename
 
 	def make_ma_dict(self, bot):
 		ma = {}
@@ -587,11 +590,16 @@ class BotDB:
 			print(bt.result.roi)
 		return bt.result
 
-	def csv_to_dataframe(self):
-		csv = self.get_csv_file()
-		configs = pd.read_csv(csv)
-		print(configs)
-		return configs
+	def csv_to_dataframe(self, csv = None):
+		if csv == None:
+			csv = self.get_csv_file()
+			configs = pd.read_csv(csv)
+			print(configs)
+			return configs
+		else:
+			configs = pd.read_csv(csv)
+			print(configs)
+			return configs
 
 	def dataframe_to_csv(self, bot, df):
 		filename = f'{EnumPriceSource(bot.priceMarket.priceSource).name},{bot.priceMarket.primaryCurrency},{bot.priceMarket.secondaryCurrency}.csv'

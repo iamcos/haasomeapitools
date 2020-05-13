@@ -10,7 +10,7 @@ import jsonpickle
 import datetime
 from datetime import datetime
 from pathlib import Path
-from ratelimit import limits
+from ratelimit import limits, sleep_and_retry
 from numpy import arange
 import base64, zlib, gzip
 import pandas as pd
@@ -91,8 +91,9 @@ class MadHatterBot(Bot):
         # print(bot.result.__dict__)
         return bot.result
     def return_botlist(self):
-        bl = self.c().customBotApi.get().result
-        botlist == [x for x in bl if x.botType == 15]
+        bl = self.c().customBotApi.get_all_custom_bots().result
+        botlist = [x for x in bl if x.botType == 15]
+        # print(botlist)
         return botlist
 
     def set_safety_parameters(self,bot, config):
@@ -237,63 +238,6 @@ class MadHatterBot(Bot):
             print(bot.name,' Has been configured')
         return bot_configs
 
-    def bt_mh_on_update(self, bot,ticks):
-
-        bt = self.c().customBotApi.backtest_custom_bot(
-            bot.accountId,
-            bot.guid,
-            int(ticks),
-            bot.priceMarket.primaryCurrency,
-            bot.priceMarket.secondaryCurrency,
-            bot.priceMarket.contractName,
-        )
-        if bt.errorCode != EnumErrorCode.SUCCESS:
-            print("bt", bt.errorCode, bt.errorMessage)
-        else:
-            # print(bt.result.roi)
-            return bt.result
-    def identify_which_bot(self):
-        botlist = self.return_botlist()
-        while True:
-            botlist2 =	self.return_botlist()
-            for x in len(botlist):
-                c = self.compare_indicators(botlist[x],botlist2[x])
-                if c > 0:
-                    return botlist[x].guid
-                else:
-                    pass
-
-
-
-
-    @limits(calls=5, period=10)
-    def compare_indicators(self,bot, bot1):
-
-        unmatched_rsi = set(bot.rsi.items()) ^ set(bot1.rsi.items())
-        unmatched_bbands = set(bot.bBands.items()) ^ set(bot1.bBands.items())
-        unmatched_macd = set(bot.macd.items()) ^ set(bot1.macd.items())
-        unmatched_interval = set(bot.interval.items()) ^ set(bot1.interval.items())
-
-        total_diff = len(unmatched_macd) + len(unmatched_interval) + len(unmatched_bbands) + len(unmatched_rsi)
-        return total_diff
-
-
-    def bot_monitor(self,bot):
-        bots_list = [bot, bot]
-        guid = bot.guid
-
-        while True:
-
-            c = self.compare_indicators(bots_list[-1], bots_list[-2])
-
-            if c > 0:
-
-                bt= self.bt_mh_on_update(self,bot)
-                if isinstance(bt, dict):
-                    break
-                else:
-                    bots_list.append(bt)
-        return bots_list
 
     def bt_mh(self,bot):
 
@@ -425,3 +369,56 @@ class MadHatterBot(Bot):
             completedOrders = [{'orderId': None,'orderStatus':None, 'orderType':None, 'price': None,'amount':None,'amountFilled':None,'unixTimeStamp':datetime.today()}for x in range(1)]
             orders_df = pd.DataFrame(completedOrders)
         return orders_df
+    # @sleep_and_retry
+    # @limits(calls=3, period=2)
+    def compare_indicators(self, bot, bot1):
+        # print(bot.rsi, '\n',bot1.rsi)
+        rsi = bot.rsi.items() == bot1.rsi.items()
+        bbands = bot.bBands.items() == bot1.bBands.items()
+        macd = bot.macd.items() == bot1.macd.items()
+        interval = bot.interval == bot1.interval
+        if rsi == True and bbands == True and macd == True and interval == True:
+            return True
+        else:
+            # print('bot not alike')
+            return False
+
+
+    @sleep_and_retry
+    @limits(calls=5, period=3)
+    def identify_which_bot(self, ticks):
+        results = []
+        botlist = self.return_botlist()
+        try:
+            while True:
+
+                botlist2 = self.return_botlist()
+                lists = zip(botlist, botlist2)
+                for x in lists:
+                    # c = self.compare_indicators(lists[x][0], lists[x][1])
+                    c = self.compare_indicators(x[0], x[1])
+                    if c == False:
+                        botlist = botlist2
+                        # print(ticks)
+                        bot = self.bt_mh_on_update(x[1],ticks)
+                        results.append(bot)
+                    elif c == True:
+                        pass
+        except KeyboardInterrupt:
+            return results
+    @sleep_and_retry
+    @limits(calls=2, period=1)
+    def bt_mh_on_update(self, bot, ticks):
+
+        bt = self.c().customBotApi.backtest_custom_bot(
+            bot.guid,
+            int(ticks)
+        )
+        if bt.errorCode != EnumErrorCode.SUCCESS:
+            print("bt", bt.errorCode, bt.errorMessage)
+        else:
+            # print(bt.result.roi)
+            # print(bt.errorCode, bt.errorMessage)
+            return bt.result
+            # yeid
+1

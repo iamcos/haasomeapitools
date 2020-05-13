@@ -191,12 +191,3 @@ class MarketData(Haas):
         ticker = self.c().marketDataApi.get_minute_price_ticker_from_market(marketobj)
         df = self.to_df_for_ta(ticker.result)
         return df
-
-    def update_local_market_data(self, marketobj):
-
-def main():
-
-    print(MarketData().empty_market_data_df().head())
-
-if __name__ == '__main__':
-    main()
