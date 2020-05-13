@@ -385,7 +385,7 @@ class MadHatterBot(Bot):
     @limits(calls=4, period=3)
 
     def identify_which_bot(self, ticks):
-        # results = []
+        results = []
         botlist = self.return_botlist()
         try:
             while True:
@@ -393,15 +393,18 @@ class MadHatterBot(Bot):
                 botlist2 = self.return_botlist()
                 lists = zip(botlist, botlist2)
                 for x in lists:
-                    # c = self.compare_indicators(lists[x][0], lists[x][1])
-                    c = self.compare_indicators(x[0], x[1])
-                    if c == False:
-                        botlist = botlist2
-                        # print(ticks)
-                        bot = self.bt_mh_on_update(x[1],ticks)
-                        results.append(bot)
-                    elif c == True:
-                        pass
+                     if x[0].guid == x[1].guid:   
+                        # c = self.compare_indicators(lists[x][0], lists[x][1])
+                        c = self.compare_indicators(x[0], x[1])
+                        if c == False:
+                            botlist = botlist2
+                            # print(ticks)
+                            bot = self.bt_mh_on_update(x[1],ticks)
+                            results.append(bot)
+                        elif c == True:
+                            pass
+                     else:
+                        return results
         except KeyboardInterrupt:
             return results
     @sleep_and_retry
