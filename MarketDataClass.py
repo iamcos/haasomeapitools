@@ -6,6 +6,7 @@ import csv
 from haasomeapi.enums.EnumPriceSource import EnumPriceSource
 from time import sleep
 from haasomeapi.enums.EnumErrorCode import EnumErrorCode
+from ratelimit import limits, sleep_and_retry
 class MarketData(Haas):
     def __init__(self):
         Haas.__init__(self)
@@ -45,21 +46,23 @@ class MarketData(Haas):
         market_data = [
             {
 
-                "date": x.unixTimeStamp,
-                "open": x.open,
-                "high": x.highValue,
-                "low": x.lowValue,
-                "close": x.close,
-                "buy": x.currentBuyValue,
-                "sell": x.currentSellValue,
-                "volume": x.volume,
+                "Date": x.unixTimeStamp,
+                "Open": x.open,
+                "High": x.highValue,
+                "Low": x.lowValue,
+                "Close": x.close,
+                "Buy": x.currentBuyValue,
+                "Sell": x.currentSellValue,
+                "Volume": x.volume,
             }
             for x in market_history
         ]
-
+        print(market_data)
         df = pd.DataFrame(market_data)
+
         try:
-            df['date'] = pd.to_datetime(df['date'], unit = 's')
+            df['Date'] = pd.to_datetime(df['Date'], unit = 's')
+
         except:
             print('Whops')
   # print(df.index)
@@ -92,42 +95,41 @@ class MarketData(Haas):
 
         obj = df[df["pricesource"] == pricesource][df["primarycurrency"]
                                              == primarycoin][df["secondarycurrency"] == secondarycoin]
-        print('obj',obj)
+        # print('Market obj',obj.obj[0]__dict__)
         # print('obj1', obj[0][3])
-        return obj
+        return obj.obj.values[0]
     def db_table(self):
 
         db_tables = {}
         market_data_cols = ['dt', 'open', 'close', 'volume', 'buy', 'sell']
         indicator_cols = ['dt', 'val1','val2','val3']
 
+    @sleep_and_retry
+    @limits(calls=1, period=3)
     def get_market_data(self, priceMarketObject, interval, depth):
             marketdata = self.c().marketDataApi.get_history_from_market(
-                priceMarketObject, interval, int(depth))
+            priceMarketObject, interval, depth)
             print(marketdata.errorCode, marketdata.errorMessage)
-            while marketdata.errorCode != EnumErrorCode.SUCCESS:
-                # if marketdata.errorCode != EnumErrorCode.SUCCESS:
-                            marketdata = self.c().marketDataApi.get_history_from_market(
-                                                        priceMarketObject, interval, depth)
-                            print(marketdata.errorCode, marketdata.errorMessage)
-            else:
-                print('len of market data ', len(marketdata.result))
-                while len(marketdata.result) <= 0:
-                    sleep(5)
-                    marketdata = self.c().marketDataApi.get_history_from_market(
-                        priceMarketObject, interval, depth)
-                    print(marketdata.errorCode, marketdata.errorMessage)
-                else:
-                    df = self.to_df_for_ta(marketdata.result)
-                    print(df)
-
-                    return df
+            df = self.to_df_for_ta(marketdata.result)
+            return df
 
     def save_market_data_to_csv(self, marketData, marketobj):
         filename = f'{EnumPriceSource(marketobj.priceSource).name}|{marketobj.primaryCurrency}|{marketobj.secondaryCurrency}.csv'
 
         marketData.to_csv(f'./market_data/{filename}')
         print(f'{EnumPriceSource(marketobj.priceSource).name} | {marketobj.primaryCurrency} | {marketobj.secondaryCurrency} sucessfuly saved to csv')
+        return f"sucessfully saved {filename} to market_data folder, with {len(marketData)} ticks included"
+
+    def read_csv(self,file,nrows=None):
+        data = pd.read_csv(file,nrows=nrows)
+        def uppercase(x): return str(x).capitalize()
+        data.rename(uppercase, axis='columns', inplace=True)
+        data['Data'] = pd.to_datetime(data['Data'])
+        dti = pd.DatetimeIndex([x for x in data['Date']])
+        data.set_index(dti, inplace=True)
+        print(data)
+        # data['Date'] = pd.to_datetime(data['timestamp'])
+        return data
 
 
     def stream_orderbook(self, pricemarketObject):
@@ -166,26 +168,19 @@ class MarketData(Haas):
         return markets_dropdown
 
 
-    def primarycoin_dropdown(self8, pricesource,):
+    def primarycoin_dropdown(self, pricesource,):
 
         df = self.get_all_markets()
         pairs = df[df["pricesource"] == pricesource]
-        primary_coin_dropdown = [{'label': str(x), 'value': str(
-            x)} for x in pairs.primarycurrency.unique()]
 
-        return primary_coin_dropdown
+        return pairs.primarycurrency.unique()
 
-
-    def secondary_coin_dropdown(self, primarycoin, pricesource,):
+    def secondary_coin_dropdown(self, pricesource, primarycurrency):
 
         df = self.get_all_markets()
-        pairs = df[df["pricesource"] ==
-                pricesource][df['primarycurrency'] == primarycoin]
-        # print(pairs)
-        secondary_coin_dropdown = [{'label': str(x), 'value': str(
-            x)} for x in pairs.secondarycurrency.unique()]
-        # print(secondary_coin_dropdown)
-        return secondary_coin_dropdown
+        df = self.get_all_markets()
+        pairs = df[df["pricesource"] == pricesource][df['primarycurrency'] == primarycurrency]
+        return pairs.secondarycurrency.unique()
 
     def get_last_minute_ticker(self, marketobj):
         ticker = self.c().marketDataApi.get_minute_price_ticker_from_market(marketobj)

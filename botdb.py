@@ -58,119 +58,110 @@ class BotDB(BotDB):
         all_mh_bots = [x for x in all_bots if x.botType == 15] #sorting them to only Mad Hatter Bot(bot type 15 )
         opts= [[x.name,x] for x in all_mh_bots] #making botlist with names
         return opts
+    # calling it setup_bot. It checks each parameter against new config.
 
-
-    def setup_bot(self,bot,config): #calling it setup_bot. It checks each parameter against new config.
-            if bot.bBands["Length"] != config['bbl']: #if params differ - applies new one.
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter( #this way less api calls is being made
+    def setup_bot(self, bot, config):
+           # if params differ - applies new one.
+        if bot.bBands["Length"] != config.bBands['Length']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(  # this way less api calls is being made
                 bot.guid,
                 EnumMadHatterIndicators.BBANDS,
                 0,
-                    config['bbl']
+                config.bBands['Length']
             )
 
-            if bot.bBands["Devup"] != config['devup']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
-                    bot.guid,
-                    EnumMadHatterIndicators.BBANDS,
-                    1,
-                    config['devup'],
-                )
+        if bot.bBands["Devup"] != config.bBands['Devup']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                1,
+                config.bBands['Devup'],
+            )
 
-
-            if bot.bBands["Devdn"] != config['devdn']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+        if bot.bBands["Devdn"] != config.bBands['Devdn']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.BBANDS,
                 2,
-                config['devdn'],
-                )
+                config.bBands['Devdn'],
+            )
 
-
-            if bot.bBands["MaType"] != config['matype']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+        if bot.bBands["MaType"] != config.bBands['MaType']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.BBANDS,
                 3,
-                config['matype'],
-                )
+                config.bBands['MaType'],
+            )
 
-
-            if bot.bBands["AllowMidSell"] != config['allowmidsells']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+        if bot.bBands["AllowMidSell"] != config.bBands['AllowMidSell']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.BBANDS,
                 5,
-                config['allowmidsells'],
-                )
+                config.bBands['AllowMidSell'],
+            )
 
-
-            if bot.bBands["RequireFcc"] != config['fcc']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+        if bot.bBands["RequireFcc"] != config.bBands['RequireFcc']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.BBANDS,
                 6,
-                config['fcc'],
-                )
+                config.bBands['RequireFcc'],
+            )
 
-
-            if bot.rsi["RsiLength"] != config['rsil']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+        if bot.rsi["RsiLength"] != config.rsi['RsiLength']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.RSI,
                 0,
-                config['rsil'],
-                )
+                config.rsi['RsiLength'],
+            )
 
-
-            if bot.rsi["RsiOverbought"] != config['rsib']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+        if bot.rsi["RsiOverbought"] != config.rsi['RsiOverbought']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.RSI,
                 1,
-                config['rsib'],
-                )
+                config.rsi['RsiOverbought'],
+            )
 
-
-            if bot.rsi["RsiOversold"] != config['rsis']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+        if bot.rsi["RsiOversold"] != config.rsi['RsiOversold']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.RSI,
                 2,
-                config['rsis'],           )
+                config.rsi['RsiOversold'],)
 
-
-            if bot.macd["MacdFast"] != config['macdfast']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+        if bot.macd["MacdFast"] != config.macd['MacdFast']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.MACD,
                 0,
-                config['macdfast'],
-                )
+                config.macd['MacdFast'],
+            )
 
-            if bot.macd["MacdSlow"] != config['macdslow']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+        if bot.macd["MacdSlow"] != config.macd['MacdSlow']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.MACD,
                 1,
-                config['macdslow'],
-                )
+                config.macd['MacdSlow'],
+            )
 
-
-            if bot.macd["MacdSign"] != config['macdsign']:
-                do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+        if bot.macd["MacdSign"] != config.macd['MacdSign']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.MACD,
                 2,
-                config['macdsign'],
-                )
+                config.macd['MacdSign'],
+            )
 
-                                                                        #Indicator parameters have been set
+                                                                    #Indicator parameters have been set
 
-
-            if bot.interval != config['interval']:
-                setup_bot = self.c.customBotApi.setup_mad_hatter_bot( # This code sets time interval as main goalj
-                botName = bot.name,
+        if bot.interval != config.interval:
+            setup_bot = self.c.customBotApi.setup_mad_hatter_bot(  # This code sets time interval as main goalj
+                botName= bot.name,
                 botGuid=bot.guid,
                 accountGuid=bot.accountId,
                 primaryCoin=bot.priceMarket.primaryCurrency,
@@ -184,13 +175,12 @@ class BotDB(BotDB):
                 tradeAmount=bot.currentTradeAmount,
                 useconsensus=bot.useTwoSignals,
                 disableAfterStopLoss=bot.disableAfterStopLoss,
-                interval=config['interval'],
+                interval=config.interval,
                 includeIncompleteInterval=bot.includeIncompleteInterval,
                 mappedBuySignal=bot.mappedBuySignal,
                 mappedSellSignal=bot.mappedSellSignal,).result
 
-
-            print(bot.name,' Has been configured')
+        print(bot.name, ' Has been configured')
 
                                                                 # And here we set bot's safeties.
     def set_safety_parameters(newbot, example_bot):
@@ -204,7 +194,7 @@ class BotDB(BotDB):
             newbot.guid, EnumMadHatterSafeties.STOP_LOSS, example_bot.stopLoss)
         print(stopLoss.errorCode,stopLoss.errorMessage)
 
-    def calculate_ticks(start_date,end_date):
+    def calculate_ticks(self,start_date,end_date=datetime.datetime.today()):
         diff = end_date-start_date
         secs = diff.total_seconds()/60
         return int(secs)
@@ -222,20 +212,13 @@ class BotDB(BotDB):
 
     def iterate(self,configs,bot):
         for i in configs.index:
-            config = configs.iloc[i]
-            self.setup_bot(bot,config)
-            print(config)
-            print(bot)
-            bt = self.c.customBotApi.backtest_custom_bot_on_market(
-                    bot.guid,
-                    int(depth))
-            configs['roi'] = bt.result.roi
-            configs['botobject'] = bt.result
+                    config = configs.iloc[i]
+                    self.setup_bot(bot,config)
+                    print(config)
+                    print(bot)
+                    bt = self.c.customBotApi.backtest_custom_bot_on_market(
+                            bot.guid,
+                            int(depth))
+                    configs['roi'] = bt.result.roi
+                    configs['botobject'] = bt.result
         return configs
-
-    def compare_indicators(self, bot, bot1):
-            # print(bot.rsi, '\n',bot1.rsi)
-            diff = {}
-            for i in ['rsi', 'bBands', 'macd', 'interval']:
-                diff[i] = bot[i].items() ^ bot1[i].items()
-            print(diff)
