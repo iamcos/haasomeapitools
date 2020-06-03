@@ -47,17 +47,13 @@ def validateserverdata():
         secret = logindata.get("secret")
         # print(ipport, secret)
         haasomeClient = HaasomeClient(ipport, secret)
-        if haasomeClient.test_credentials().errorCode != EnumErrorCode.SUCCESS:
-            # print("\n\n\n\n\n\n\n\n")
-            print(haasomeClient.test_credentials().errorMessage)
-            print(
-                "\nHave you enabled Local API in Haasonline Server Settings? \nIMPORTANT: IP, PORT should have the same data as here, secret must show dots. \nIf there are no dots in Secret, input them and hit SAVE button at the bottom of the page. \n"
-            )
-            serverdata()
-        else:
-            # print("\n\n\n\n\n\n\n\n")
-            # print("Sucessfully connected to HaasOnline!")
+     
+        if haasomeClient.test_credentials().errorCode == EnumErrorCode.SUCCESS:
             return ipport, secret
+            print(haasomeClient.test_credentials().errorCode)
+           
+        elif haasomeClient.test_credentials().errorCode == EnumErrorCode.CONNECTION_FAILED:
+             serverdata()
     except KeyError:
         serverdata()
     except FileNotFoundError:
@@ -107,30 +103,6 @@ def set_bt():
 
 
 
-
-
-def read_bt():
-    config = configparser.ConfigParser()
-    try:
-        config.read("bt.ini")
-    except FileNotFoundError:
-        currentfile = Path(str("bt.ini"))
-        currentfile.touch(exist_ok=True)
-        set_bt()
-    try:
-        dd = config["BT"]
-
-    except KeyError:
-        currentfile = Path(str("bt.ini"))
-        currentfile.touch(exist_ok=True)
-        print("bt has been created!")
-
-    year = dd.get("year")
-    month = dd.get("month")
-    day = dd.get("day")
-    hour = dd.get('hour')
-    minute = dd.get('minute')
-    return year, month, day, hour, minute
 
 
 def main():

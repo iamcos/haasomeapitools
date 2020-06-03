@@ -426,9 +426,8 @@ class BotDB:
         print(configs.head(20))
         return configs
 
-    def bt_mh(self, bot, configs, ind):
+    def bt_mh(self, bot, configs, ind, ticks):
 
-        ticks = iiv.total_ticks()
         bt = self.c.customBotApi.backtest_custom_bot_on_market(
             bot.accountId,
             bot.guid,

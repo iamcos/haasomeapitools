@@ -1,3 +1,4 @@
+.ipynb_checkpoints
 env
 .trash
 BotConfigs
@@ -5,9 +6,10 @@ BotConfigs
 .macenv
 .vscode
 __pycache__
-#*.csv
+*.csv
 *.ini
 *.db
+market_data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -80,8 +82,7 @@ docs/_build/
 # PyBuilder
 target/
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Jupyter Notebook_checkpoints
 
 # pyenv
 .python-version
@@ -133,10 +134,8 @@ app.py
 *.csv
 pandasplay.py
 test_Haas.py
-Untitled.ipynb
 cache_function.py
 BINANCE,ADA,BNB.csv
-tech_screener_notebook.ipynb
 app.py
 *.icloud
 afasdgdsfg.py
@@ -152,10 +151,8 @@ BINANCE,ADA,BNB.csv
 apibenchmark.py
 botconfigs.csv
 notes.py
-pandas-ta.ipynb
 pong.kv
 pydygraph.py
-PyDyGraphTester.ipynb
 haasscript.js
 indicatorRanges_1.py
 HaasFilesClass.py
@@ -166,15 +163,10 @@ haas.css
 gui.py
 file.env
 dash-technical-charting/
-Cufflinks Tutorial - Chart Gallery.ipynb
 completedor.py
-Candlestick-Charts-in-Python2.ipynb
-Candlestick-Charts-in-Python.ipynb
 botconfigs.csv
 BINANCE,ADA,BNB.csv
 wasdasd.py
-Untitled1.ipynb
-Untitled2.ipynb
 workspace.code-workspace
 w.code-workspace
 quantmod/version.py
@@ -211,5 +203,3 @@ premut.py
 savehistory_old.py
 temp.py
 vid_scripts.py
-widget_syling.ipynb
-widgetsexample.ipynb

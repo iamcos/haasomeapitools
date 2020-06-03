@@ -154,3 +154,61 @@ class MadHatterBot(Bot):
         return orders_df
     # @sleep_and_retry
     # @limits(calls=3, period=2)
+<<<<<<< HEAD
+=======
+    def compare_indicators(self, bot, bot1):
+        # print(bot.rsi, '\n',bot1.rsi)
+        rsi = bot.rsi.items() == bot1.rsi.items()
+        bbands = bot.bBands.items() == bot1.bBands.items()
+        macd = bot.macd.items() == bot1.macd.items()
+        interval = bot.interval == bot1.interval
+        if rsi == True and bbands == True and macd == True and interval == True:
+            return True
+        else:
+            # print('bot not alike')
+            return False
+
+
+    @sleep_and_retry
+    @limits(calls=4, period=3)
+
+    def identify_which_bot(self, ticks):
+        results = []
+        botlist = self.return_botlist()
+        try:
+            while True:
+
+                botlist2 = self.return_botlist()
+                lists = zip(botlist, botlist2)
+                for x in lists:
+                     if x[0].guid == x[1].guid:   
+                        # c = self.compare_indicators(lists[x][0], lists[x][1])
+                        c = self.compare_indicators(x[0], x[1])
+                        if c == False:
+                            botlist = botlist2
+                            # print(ticks)
+                            bot = self.bt_mh_on_update(x[1],ticks)
+                            results.append(bot)
+                        elif c == True:
+                            pass
+                     else:
+                        return results
+        except KeyboardInterrupt:
+            return results
+    @sleep_and_retry
+    @limits(calls=3, period=2)
+    def bt_mh_on_update(self, bot, ticks):
+
+        bt = self.c().customBotApi.backtest_custom_bot(
+            bot.guid,
+            int(ticks)
+        )
+        if bt.errorCode != EnumErrorCode.SUCCESS:
+            print("bt", bt.errorCode, bt.errorMessage)
+        else:
+            # print(bt.result.roi)
+            # print(bt.errorCode, bt.errorMessage)
+            return bt.result
+            # yeid
+1
+>>>>>>> 1ef4d22798b06e45592ea1375df8e65431e0a973
