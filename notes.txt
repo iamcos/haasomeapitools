@@ -1,0 +1,3 @@
+chat['id','username',]
+
+from_user['id','username','text']

@@ -1,4 +1,4 @@
-from BaseHaas import Haas
+
 import requests
 import json
 import pandas as pd
@@ -67,6 +67,7 @@ class MarketData(Haas):
             print('Whops')
   # print(df.index)
         return df
+
     def get_all_markets(self):
 
         markets = [
@@ -186,3 +187,18 @@ class MarketData(Haas):
         ticker = self.c().marketDataApi.get_minute_price_ticker_from_market(marketobj)
         df = self.to_df_for_ta(ticker.result)
         return df
+
+def main():
+    all_markets = MarketData().get_all_markets()
+    # print(all_markets.pricesource.unique())
+    # print(len(all_markets.pricesource.unique()))
+    # print(all_markets.primarycurrency.unique())
+    # print(len(all_markets.primarycurrency.unique()))
+    all_markets[['pricesource', 'primarycurrency', 'secondarycurrency']].to_csv('all_markets_pairs.csv')
+    all_markets[['primarycurrency', 'secondarycurrency']].to_csv('all_pairs.csv')
+    all_markets.pricesource.to_csv('all_exchanges.csv')
+    print(EnumPriceSource(all_markets.obj[0].priceSource))
+    # all_markets.to_csv('all_markets.csv')
+    print(all_markets.obj[0].priceSource)
+if __name__ == "__main__":
+    main()

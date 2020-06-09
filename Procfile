@@ -1,1 +1,2 @@
-web: gunicorn app_select_bot:server -b :8000
+
+web: gunicorn app:app

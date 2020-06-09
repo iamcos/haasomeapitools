@@ -154,8 +154,6 @@ class MadHatterBot(Bot):
         return orders_df
     # @sleep_and_retry
     # @limits(calls=3, period=2)
-<<<<<<< HEAD
-=======
     def compare_indicators(self, bot, bot1):
         # print(bot.rsi, '\n',bot1.rsi)
         rsi = bot.rsi.items() == bot1.rsi.items()
@@ -181,7 +179,7 @@ class MadHatterBot(Bot):
                 botlist2 = self.return_botlist()
                 lists = zip(botlist, botlist2)
                 for x in lists:
-                     if x[0].guid == x[1].guid:   
+                     if x[0].guid == x[1].guid:
                         # c = self.compare_indicators(lists[x][0], lists[x][1])
                         c = self.compare_indicators(x[0], x[1])
                         if c == False:
@@ -211,4 +209,3 @@ class MadHatterBot(Bot):
             return bt.result
             # yeid
 1
->>>>>>> 1ef4d22798b06e45592ea1375df8e65431e0a973

@@ -1,3 +1,4 @@
+*.session
 .ipynb_checkpoints
 env
 .trash
