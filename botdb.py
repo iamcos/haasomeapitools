@@ -11,14 +11,14 @@ from haasomeapi.enums.EnumMadHatterIndicators import EnumMadHatterIndicators
 from haasomeapi.enums.EnumMadHatterSafeties import EnumMadHatterSafeties
 import datetime
 from botsellector import BotSellector
-from BaseHaas import Bot
+from BaseHaas import Bot, Haas
 
 class BotDB:
     def __init__(self):
         self.c = self.cnt()
 
     def cnt(self):
-        ip, secret = configserver.validateserverdata()
+        ip, secret = Haas().read_config()
         haasomeClient = HaasomeClient(ip, secret)
         return haasomeClient
 

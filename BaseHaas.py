@@ -25,11 +25,13 @@ import pickle
 import os
 import json
 from haasomeapi.enums.EnumCustomBotType import EnumCustomBotType
-
-
+import configparser as cp
+from PyInquirer import (Token, ValidationError, Validator, print_json, prompt,
+						style_from_dict)
+from examples import custom_style_2
 import configserver
 from haasomeapi.HaasomeClient import HaasomeClient
-
+from haasomeapi.enums.EnumErrorCode import EnumErrorCode
 
 class Haas():
 
@@ -38,14 +40,166 @@ class Haas():
 	"""
 
 	def __init__(self):
-		self.c = self.client
+		self.c = self.client()
 
+	def read_config(self):
+		c = cp.ConfigParser()
+		c.read('config.ini')
+		ip = c['SERVER DATA']['server_address']
+		secret=c['SERVER DATA']['secret']
+		return ip, secret
+
+	def read_ticks(self):
+		c = cp.ConfigParser()
+		c.read('config.ini')
+		min = c['BT DATE'].get('min')
+		hour=c['BT DATE'].get('hour')
+		day = c['BT DATE'].get('day')
+		month = c['BT DATE'].get('month')
+		year = c['BT DATE'].get('year')
+		print(year,month,day,hour,min)
+		dt_from = datetime.datetime(int(year),int(month),int(day),int(hour),int(min))
+		delta = datetime.datetime.now() - dt_from
+		delta_minutes = delta.total_seconds()/60
+		return int(delta_minutes)
+		
 	def client(self):
-		ip, secret = configserver.validateserverdata()
+		ip, secret = self.read_config()
 		haasomeClient = HaasomeClient(ip, secret)
 		return haasomeClient
 
+	def test_config(self):
 
+		c = cp.ConfigParser()
+		try:
+			c.read('config.ini')
+			ip = c['SERVER DATA']['server_address']
+			secret=c['SERVER DATA']['secret']
+			test = self.client(ip,secret)
+			print(test.test_credentials().errorMessage.__dict__,test.test_credentials().errorCode.value)
+			if test.test_credentials().errorCode.value == EnumErrorCode.SUCCESS:
+				return ip, secret
+			else:
+				pass
+
+
+		except:
+			print('Config file not found.')
+			self.configure_haas()
+
+
+
+	def configure_haas(self):
+
+		apiSetup = [
+			{
+				'type': 'confirm',
+				'name': 'apiConfigured',
+				'message': 'Have you configured Haas Online API on the client side?',
+				'default': False
+			},
+			]
+		setup = prompt(apiSetup,style =custom_style_2)
+
+
+		if not setup['apiConfigured']:
+			print(f'Following is a step by step guide to configure Haas Local Api. After doing each step, type Y on keyboard to get to next step. \n')
+			config_questions = [
+				{
+					'type':'confirm',
+					'name': 'settingsPage',
+					'message': 'Open HaasOnline Settings page',
+					'default':False
+
+
+				},
+				{
+					'type':'confirm',
+					'name': 'apiSettingsPage',
+					'message': 'Navigate to Local Api page in Settings',
+					'default':False
+				},
+				{
+					'type':'confirm',
+					'name': 'inputIP',
+					'message': 'Input IP. If this app on the same server type:127.0.0.1, else: server address that you use to access Haas remotely',
+					'default':False
+				},
+				{
+					'type':'confirm',
+					'name': 'inputPort',
+					'message': 'Input Port Number in the next field. Can be any number, for instance 8095',
+					'default':False
+				},
+				{
+					'type':'confirm',
+					'name': 'inputSecret',
+					'message': 'Input API key in the next field. If app running on the same server, can be simple.  Else, make it complicated',
+					'default':False
+				},
+				{
+					'type':'confirm',
+					'name': 'saveClicked',
+					'message': 'Click save at the bottom of the page and wait for Haas to do its thing.',
+					'default':False
+				},
+				{
+					'type': 'confirm',
+					'name': 'passwordSavedAgain',
+					'message': 'Once Haas done its thing, go back to Settings > Local API page and check that password field is not empty. If empty, enter it again and hit save again',
+					'default': False
+
+				},
+				{
+					'type': 'confirm',
+					'name': 'restarted',
+					'message': 'Once saved, restart Haas server. If running on windows, check if there is any mentions of Local API server in the console app. App will test the connection itself at a later stage',
+					'default':  False
+				},
+				{
+					'type': 'confirm',
+					'name': 'apiActivated',
+					'message': 'API should be activated, Now lets input API data into the app. This only needs to be done once.',
+					'default': False
+				}
+
+					]
+			configuredAPI = prompt(config_questions)
+
+		server_api_data = [
+				{
+					'type': 'input',
+					'name': 'ip',
+					'message': 'Type Haas Local api IP like so: 127.0.0.1',
+					'default' :'127.0.0.1'
+
+
+				},
+				{
+					'type': 'input',
+					'name': 'port',
+					'message': 'Type Haas Local api PORT like so: 8095',
+					'default' :'8095'
+
+
+				},
+				{
+					'type': 'password',
+					'name': 'secret',
+					'message': 'Type Haas Local Key (Secret) like so: 123',
+					'default' :'123'
+
+
+				}
+					]
+		connection_data = prompt(server_api_data)
+		print(connection_data)
+		c = cp.ConfigParser()
+		c['SERVER DATA'] = {'server_address':'http://'+connection_data['ip']+':'+connection_data['port'],'secret':connection_data['secret']}
+		with open('config.ini','w') as configfile:
+				c.write(configfile)
+		print(c._sections)
+		return connection_data
 class Bot(Haas):
 	def __init__(self):
 		Haas.__init__(self)
@@ -54,7 +208,7 @@ class Bot(Haas):
 class MadHatterBot(Bot):
 
 	def create_mh(self, input_bot, name):
-		new_mad_hatter_bot = self.c().customBotApi.new_mad_hatter_bot_custom_bot(
+		new_mad_hatter_bot = self.c.customBotApi.new_mad_hatter_bot_custom_bot(
 			input_bot.accountId,
 			input_bot.botType,
 			name,
@@ -69,7 +223,7 @@ class MadHatterBot(Bot):
 	@sleep_and_retry
 	@limits(calls=3, period=2)
 	def return_botlist(self):
-		bl = self.c().customBotApi.get_all_custom_bots().result
+		bl = self.c.customBotApi.get_all_custom_bots().result
 		botlist = [x for x in bl if x.botType == 15]
 		# print(botlist)
 		return botlist
@@ -217,7 +371,7 @@ class MadHatterBot(Bot):
 	@limits(calls=3, period=2)
 	def bt_mh_on_update(self, bot, ticks):
 
-		bt = self.c().customBotApi.backtest_custom_bot(
+		bt = self.c.customBotApi.backtest_custom_bot(
 			bot.guid,
 			int(ticks)
 		)
@@ -229,7 +383,10 @@ class MadHatterBot(Bot):
 			return bt.result
 
 			# yeid
-
+	def return_bot(self, guid):
+		bot = self.c.customBotApi.get_custom_bot(
+		guid, EnumCustomBotType.MAD_HATTER_BOT).result
+		return bot
 
 from functools import lru_cache
 from haasomeapi.enums.EnumErrorCode import EnumErrorCode
@@ -243,7 +400,7 @@ class TradeBot(Bot):
 		Bot.__init__(self)
 
 	def return_bot(self, guid):
-		bot = self.c().tradeBotApi.get_trade_bot(guid).result
+		bot = self.c.tradeBotApi.get_trade_bot(guid).result
 		return bot
 	def get_indicators(self,bot):
 		'''
@@ -319,7 +476,7 @@ class TradeBot(Bot):
 	def add_indicator(self, bot, indicator):
 		failed = []
 		try:
-			add = self.c().tradeBotApi.add_indicator(bot.guid, indicator)
+			add = self.c.tradeBotApi.add_indicator(bot.guid, indicator)
 			if add.result:
 				print('Indicator', EnumIndicator(indicator).name, ' added to ', bot.name)
 			else:
@@ -332,7 +489,7 @@ class TradeBot(Bot):
 
 	def edit_indicator(self, bot, indicator, field, value):
 		print(indicator)
-		indicator_config = self.c().tradeBotApi.edit_bot_indicator_settings(
+		indicator_config = self.c.tradeBotApi.edit_bot_indicator_settings(
 			bot.guid, indicator.guid, field, value)
 		# print('field',field,'value',value)
 		# print(indicator_config.errorMessage, indicator_config.errorCode)
@@ -348,7 +505,7 @@ class TradeBot(Bot):
 	def remove_indicator(self, bot, indicator):
 		failed = []
 		try:
-			add = self.c().tradeBotApi.remove_indicator(bot.guid, indicator.guid)
+			add = self.c.tradeBotApi.remove_indicator(bot.guid, indicator.guid)
 			if add.result:
 				print('Indicator', EnumIndicator(indicator).value, ' removed from ', bot.name)
 			else:
@@ -440,7 +597,7 @@ class MarketData(Haas):
 			}
 			for x in market_history
 		]
-		print(market_data)
+		# print(market_data)
 		df = pd.DataFrame(market_data)
 
 		try:
@@ -460,7 +617,7 @@ class MarketData(Haas):
 				i.secondaryCurrency,
 				i,
 			)
-			for i in self.c().marketDataApi.get_all_price_markets().result
+			for i in self.c.marketDataApi.get_all_price_markets().result
 		]
 
 		df = pd.DataFrame(
@@ -491,14 +648,14 @@ class MarketData(Haas):
 	@sleep_and_retry
 	@limits(calls=1, period=3)
 	def get_market_data(self, priceMarketObject, interval, depth):
-			marketdata = self.c().marketDataApi.get_history_from_market(
+			marketdata = self.c.marketDataApi.get_history_from_market(
 			priceMarketObject, interval, depth)
 			print(marketdata.errorCode, marketdata.errorMessage)
 			df = self.to_df_for_ta(marketdata.result)
 			return df
 
 	def save_market_data_to_csv(self, marketData, marketobj):
-		filename = f'{EnumPriceSource(marketobj.priceSource).name}|{marketobj.primaryCurrency}|{marketobj.secondaryCurrency}.csv'
+		filename = f'{EnumPriceSource(marketobj.priceSource).name}-{marketobj.primaryCurrency}-{marketobj.secondaryCurrency}-{len(marketData)}.csv'
 
 		marketData.to_csv(f'./market_data/{filename}')
 		print(f'{EnumPriceSource(marketobj.priceSource).name} | {marketobj.primaryCurrency} | {marketobj.secondaryCurrency} sucessfuly saved to csv')
@@ -517,7 +674,7 @@ class MarketData(Haas):
 
 
 	def stream_orderbook(self, pricemarketObject):
-		request = self.c().marketDataApi.get_order_book_from_market(pricemarketObject)
+		request = self.c.marketDataApi.get_order_book_from_market(pricemarketObject)
 		orderbook = request.result
 		return orderbook
 
@@ -567,7 +724,7 @@ class MarketData(Haas):
 		return pairs.secondarycurrency.unique()
 
 	def get_last_minute_ticker(self, marketobj):
-		ticker = self.c().marketDataApi.get_minute_price_ticker_from_market(marketobj)
+		ticker = self.c.marketDataApi.get_minute_price_ticker_from_market(marketobj)
 		df = self.to_df_for_ta(ticker.result)
 		return df
 

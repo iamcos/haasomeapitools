@@ -1,6 +1,11 @@
 *.session
+*.ipynb
+*.txt
+*.json
+*.js
 .ipynb_checkpoints
-env
+.tabnine_root
+*.html
 .trash
 BotConfigs
 .DS_Store
@@ -82,7 +87,7 @@ docs/_build/
 
 # PyBuilder
 target/
-
+.history
 # Jupyter Notebook_checkpoints
 
 # pyenv
@@ -95,7 +100,7 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
-.env
+# .env
 .venv
 env/
 venv/
@@ -114,93 +119,10 @@ venv.bak/
 
 # mkdocs documentation
 /site
-
-# mypy
-.mypy_cache/
-.idea/
-.patch
-.DS_Store
-*.haasbots
-Mad_hatter_rotator.py
-pp.json
-config.ini
-mh.py
-mad_hatter_bf_try1.py
-dashappp.py
-selenium_script.py
-BINANCE,ADA,BNB.csv
-BINANCE,ADA,BNB.csv
-2bots.csv
-app.py
-*.csv
-pandasplay.py
-test_Haas.py
-cache_function.py
-BINANCE,ADA,BNB.csv
-app.py
-*.icloud
-afasdgdsfg.py
-app copy.py
-app.py
-app3.py
-BackTestingClass.py
-app.py
-BINANCE,ADA,BNB.csv
-BINANCE,ADA,BNB.csv
-backtester.py
-BINANCE,ADA,BNB.csv
-apibenchmark.py
-botconfigs.csv
-notes.py
-pong.kv
-pydygraph.py
-haasscript.js
-indicatorRanges_1.py
-HaasFilesClass.py
-haasdashlayout.py
-haascallbacks.py
-Haas.kv
-haas.css
-gui.py
-file.env
-dash-technical-charting/
-completedor.py
-botconfigs.csv
-BINANCE,ADA,BNB.csv
-wasdasd.py
-workspace.code-workspace
-w.code-workspace
-quantmod/version.py
-quantmod/vendors/sources.py
-quantmod/vendors/__init__.py
-quantmod/valid.py
-quantmod/utils.py
-quantmod/tools.py
-quantmod/theming/themes.py
-quantmod/theming/skeleton.py
-quantmod/theming/palettes.py
-quantmod/theming/colors.py
-quantmod/theming/__init__.py
-quantmod/tanolib.py
-quantmod/ta.py
-quantmod/factory.py
-quantmod/datetools.py
-quantmod/core.py
-quantmod/chart.py
-quantmod/auth.py
-quantmod/__init__.py
-IndicatorsClass.py
-botconfigs.csv
-bt123.py
-btalib2.py
-deepai.py
-export.html
-log_file
-BINANCE,ADA,BNB.csv
-.replit
-marketscsv.py
-me.jpg
-premut.py
-savehistory_old.py
-temp.py
-vid_scripts.py
+Untitled.ipynb
+Untitled1.ipynb
+Untitled2.ipynb
+Untitled3.ipynb
+Untitled4.ipynb
+Untitled5.ipynb
+Untitled6.ipynb

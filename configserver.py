@@ -54,10 +54,10 @@ def validateserverdata():
            
         elif haasomeClient.test_credentials().errorCode == EnumErrorCode.CONNECTION_FAILED:
              serverdata()
-    except KeyError:
+    except Exception as e:
         serverdata()
     except FileNotFoundError:
-        currentfile = Path(str("config.ini"))
+        currentfile = Path("config.ini")
         currentfile.touch(exist_ok=True)
         print("Config has been created!")
 
@@ -105,10 +105,10 @@ def set_bt():
 
 
 
-def main():
-    dt = set_bt()
-    print(dt)
+# def main():
+#     dt = set_bt()
+#     print(dt)
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
