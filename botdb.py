@@ -30,7 +30,7 @@ class BotDB:
     def get_csv_files(self):
         files = []
         for file in os.listdir('./'):
-            if file.endswith(".csv"):
+            if file.endswith(".csv") or file.endswith('.json'):
                 files.append(os.path.join('./', file))
         return files
     def select_from_list(self, files):
@@ -40,10 +40,22 @@ class BotDB:
         self.db_file = files[int(userinput)]
         return files[int(userinput)]
 
-    def read_csv(self, csv_file):
+    def read_csv(self, file):
         # This is how we turn CSV file from previous step into a DataFrame.
-        configs = pd.read_csv(csv_file)
-        configs.head()  # prints Dataframe Head
+        if file.endswith('.csv'):
+            try:
+                configs = pd.read_csv(file)
+                # print(configs[0])
+            except Exception as e:
+                print('csv',e)
+        elif file.endswith('.json'):
+
+            try:
+                configs=pd.read_json(file)
+                # print(configs[0])
+            except Exception as e:
+                print('json',e)
+            # configs.head()  # prints Dataframe Head
         return configs
 
 

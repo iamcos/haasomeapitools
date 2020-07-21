@@ -1,23 +1,15 @@
-import spacy
-from spacy.matcher import Matcher
-
-nlp=spacy.load("en_core_web_sm")
-matcher = Matcher(nlp.vocab)
-
-pattern = [
-    {"LOWER": "target"}
-]
-
-pattern_targets = [
-    {'LOWER':"targets"},
-    {"IS_PUNCT":True, "OP":"?"},
-    {'IS_DIGIT':True,'OP':'?'},
-    {'IS_PUNCT':True,'OP':'?'}]
-
-
-doc = nlp(
-    "After making the iOS update you won't notice a radical system-wide "
-    "redesign: nothing like the aesthetic upheaval we got with iOS 7. Most of "
-    "iOS 11's furniture remains the same as in iOS 10. But you will discover "
-    "some tweaks once you delve a little deeper.")
-​print(nlp.vocab.strings)
+# try:      
+    #   roi_list = [x.__dict__ for x in sat if x !=None]
+    # except Exception as e:
+    #   print(e)
+    # try: 
+    #   roi_list2 = [x.__dict__.items() for x in sat if x !=None]
+    # except Exception as e:
+    #   print(e)
+    # print(roi_list, roi_list)
+    # rois = []
+    # for i in roi_list:
+    #       rois.append(i)
+    # for i in roi_list2:
+    #       rois.append(i)
+    # df =pd.DataFrame(roi_list)
