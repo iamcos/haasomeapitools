@@ -167,23 +167,9 @@ class BotDB:
     # calling it setup_bot. It checks each parameter against new config.
     def setup_bot(self, bot, config):
 
-        # print(f"{bot.bBands['Length']},{config.bBands['Length']}")
-        # print(f"{bot.bBands['Devup']},{config.bBands['Devup']}")
-        # print(f"{bot.bBands['Devdn']},{config.bBands['Devdn']}")
-        # print(f"{bot.bBands['MaType']},{config.bBands['MaType']}")
-        # print(f"{bot.bBands['AllowMidSell']},{config.bBands['AllowMidSell']}")
-        # print(f"{bot.bBands['RequireFcc']},{config.bBands['RequireFcc']}")
-        # print(f"{bot.rsi['RsiLength']},{config.rsi['RsiLength']}")
-        # print(f"{bot.rsi['RsiOverbought']},{config.rsi['RsiOverbought']}")
-        # print(f"{bot.rsi['RsiOversold']},{config.rsi['RsiOversold']}")
-        # print(f"{bot.macd['MacdFast']},{config.macd['MacdFast']}")
-        # print(f"{bot.macd['MacdSlow']},{config.macd['MacdSlow']}")
-        # print(f"{bot.macd['MacdSign']},{config.macd['MacdSign']}")
-        # print(f"{bot.interval},{config.interval}")
-        # print(f"{bot.interval},{config.interval}")
-        # if params differ - applies new one.
+
         if bot.bBands["Length"] != config.bBands['Length']:
-            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(  # this way less api calls is being made
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,
                 EnumMadHatterIndicators.BBANDS,
                 0,
@@ -351,66 +337,9 @@ class BotDB:
 #             configs['botobject'] = bt.result
         return configs
 
-
-class InteractiveBT(Bot):
-    def __init__(self):
-        Bot.__init__(self)
-
-    @sleep_and_retry
-    @limits(calls=3, period=2)
-    def return_botlist(self):
-        bl = self.c().customBotApi.get_all_custom_bots().result
-        botlist = [x for x in bl if x.botType == 15]
-        # print(botlist)
-        return botlist
-
-    def return_edited_bot(self):
-        botlist = self.return_botlist()
-        while True:
-            botlist2 = self.return_botlist()
-            lists = zip(botlist, botlist2)
-            for x in lists:
-                c = self.compare_indicators(x[0], x[1])
-                if c == False:
-                    return x[1]
-
-    @sleep_and_retry
-    @limits(calls=3, period=2)
-    def monitor_bot(self, bot, ticks):
-        botlist = self.return_botlist()
-        for b in botlist:
-            if b.guid == bot.guid:
-                c = self.compare_indicators(bot, b)
-                if c == True:
-                    pass
-                elif c == False:
-                    bot = self.bt_mh_on_update(b, ticks)
-                return bot
-
-    def compare_indicators(self, bot, bot1):
-        # print(bot.rsi, '\n',bot1.rsi)
-        rsi = bot.rsi.items() == bot1.rsi.items()
-        bbands = bot.bBands.items() == bot1.bBands.items()
-        macd = bot.macd.items() == bot1.macd.items()
-        interval = bot.interval == bot1.interval
-        if rsi == True and bbands == True and macd == True and interval == True:
-            return True
-        else:
-            # print('bot not alike')
-            return False
+    def verify_cfg(self):
+        c = ConfigParser
 
 
-    @sleep_and_retry
-    @limits(calls=3, period=2)
-    def bt_mh_on_update(self, bot, ticks):
-
-        bt = self.c().customBotApi.backtest_custom_bot(
-            bot.guid,
-            int(ticks)
-        )
-        if bt.errorCode != EnumErrorCode.SUCCESS:
-            print("bt", bt.errorCode, bt.errorMessage)
-        else:
-            # print(bt.result.roi)
-            # print(bt.errorCode, bt.errorMessage)
-            return bt.result
+if __name__ == "__main__":
+    pass

@@ -15,6 +15,7 @@ from functools import lru_cache
 from pathlib import Path
 from random import random
 from time import sleep
+from prompt_toolkit.validation import Validator, ValidationError
 
 import jsonpickle
 import pandas as pd
@@ -28,13 +29,12 @@ from haasomeapi.enums.EnumMadHatterSafeties import EnumMadHatterSafeties
 from haasomeapi.enums.EnumPriceSource import EnumPriceSource
 from haasomeapi.HaasomeClient import HaasomeClient
 from numpy import arange
-from PyInquirer import (Token, ValidationError, Validator, print_json, prompt,
-                        style_from_dict)
+from PyInquirer import (Token, Separator,ValidationError, Validator, print_json, prompt ,style_from_dict)
 from ratelimit import limits, sleep_and_retry
-
+# from autobt import InteractiveBT
 import configserver
 import interval as iiv
-from botdatabase import BotDB
+# from botdb import BotDB
 from botsellector import BotSellector
 
 
@@ -66,9 +66,61 @@ class Haas():
             secret=c['SERVER DATA']['secret']
         return ip, secret
 
-    def read_ticks(self):
+    def read_cfg(self):
         c = cp.ConfigParser()
         c.read('config.ini')
+        return c
+    def write_date(self):
+        c = self.read_cfg()
+        bt_date = [
+            {
+                'type': 'input',
+                'name': 'year',
+                'message': f'Write YEAR:',
+                # 'default' :str(datetime.datetime.today().year)
+
+
+            },
+            {
+                'type': 'input',
+                'name': 'month',
+                'message': f'Write month (current is {str(datetime.datetime.today().month)}): ',
+                # 'default' : 
+
+            },
+                                {
+                'type': 'input',
+                'name': 'day',
+                'message': f'Write day (today is {str(datetime.datetime.today().day)}): ',
+                # 'default' :str(datetime.datetime.today().day)
+
+
+            },
+            {
+                'type': 'input',
+                'name': 'hour',
+                'message': f'Write  hour (now is {str(datetime.datetime.today().hour)}):',
+                # 'default' :str(datetime.datetime.today().hour)
+
+
+            },
+            {
+                'type': 'input',
+                'name': 'min',
+                'message': f'Write min ( mins now {str(datetime.datetime.today().minute)}): ',
+                # 'default' :str(datetime.datetime.today().minute)
+            }
+            ]
+        answers = prompt(bt_date)
+        # print(answers,'anasers')
+        c['BT DATE'] = {'year':answers['year'], 'month':answers['month'], 'day':answers['day'],'hour':answers['hour'],'min':answers['min']}
+        with open('config.ini','w') as configfile:
+                c.write(configfile)
+    
+
+
+    def read_ticks(self):
+        c = self.read_cfg()
         try:
             min = c['BT DATE'].get('min')
             hour=c['BT DATE'].get('hour')
@@ -79,16 +131,20 @@ class Haas():
             dt_from = datetime.datetime(int(year),int(month),int(day),int(hour),int(min))
             delta = datetime.datetime.now() - dt_from
             delta_minutes = delta.total_seconds()/60
-        except Exception as e:
-            print(e)
-            
-            print('Config.ini may be outdated.')
-            c.add_section('BT DATE')
-            for ii,i in enumerate(['year','month','day','hour','min']):
-                c.set('BT DATE',str(ii),str(datetime.datetime.now().timetuple()[ii]))
-                # c['BT DATE'].set(str(ii),str[datetime.datetime.now()][i])
+        except KeyError:
+            date = self.write_date()
+            min = c['BT DATE'].get('min')
+            hour=c['BT DATE'].get('hour')
+            day = c['BT DATE'].get('day')
+            month = c['BT DATE'].get('month')
+            year = c['BT DATE'].get('year')
+            print('BT date set to: ',year,month,day,hour,min)
+            dt_from = datetime.datetime(int(year),int(month),int(day),int(hour),int(min))
+        delta = datetime.datetime.now() - dt_from
+        delta_minutes = delta.total_seconds()/60
+
         return int(delta_minutes)
-        
+
     def client(self):
         ip, secret = self.read_config()
         haasomeClient = HaasomeClient(ip, secret)
@@ -104,9 +160,8 @@ class Haas():
             test = self.client(ip,secret)
             print(test.test_credentials().errorMessage.__dict__,test.test_credentials().errorCode.value)
             if test.test_credentials().errorCode.value == EnumErrorCode.SUCCESS:
+                print('Connected to Haas')
                 return ip, secret
-            else:
-                pass
 
 
         except:
@@ -224,12 +279,121 @@ class Haas():
         c['SERVER DATA'] = {'server_address':'http://'+connection_data['ip']+':'+connection_data['port'],'secret':connection_data['secret']}
         with open('config.ini','w') as configfile:
                 c.write(configfile)
-        print(c._sections)
         return connection_data
+
 class Bot(Haas):
     def __init__(self):
         Haas.__init__(self)
 
+class Main_Menu(Haas):
+    def __init__(self):
+        Haas.__init__(self)
+        self.bot = None
+        self.file = None
+        self.configs = None
+
+    def questions(self):
+    
+        return questions
+
+    def main_screen(self):
+    
+        choices = [
+            'Start AutoBT',
+            'Backtest bot from config File',
+            'Apply configs from file to a bot',
+            'Change backtesting starting date',
+            'Change AutoBT loop Count',
+            'Quit'
+        ]
+        loop_count = 3
+       
+        # os.system('clear')
+        questions = {
+            'type': 'list',
+    
+            'name': 'resp',
+            'message': 'Select an option using keyboard up and down keys, then hit Return : ',
+            'choices': choices
+        }
+        while True:
+            try:
+                answers = prompt(questions)
+
+                if answers['resp'] in choices:
+                    ind = choices.index(answers['resp'])
+                    # print(ind,str(ind))
+                else:
+                    raise Exception('Selected Option is not available')
+                if ind == 0:
+                    BT = InteractiveBT().backtest(loop_count)
+                elif ind == 1:
+            
+                    bt = self.auto_bt_menu()
+                elif ind == 3:
+                    c = Haas().read_cfg()
+                    Haas().write_date()
+                elif ind == 3:
+                    loop_count = input('Type New Loop Count: ')
+                    print(f'Auto BT lool count has been set to: {loop_count}')
+                elif ind == 5:
+                    break
+            except KeyError:
+                # os.system('clear')
+                print('\n\n     Mouse is not supported, use keyboard instead.\n\n')
+        return answers
+  
+
+    def auto_bt_menu(self):
+
+        options = ['Select Bot','Select config file','Start Backtesting','Main Menu']
+        question = {
+            'type': 'list',
+            'name': 'autobt',
+            'message': 'Select action: ',
+            'choices': options
+        }
+        while True:
+            answer = prompt(question)
+            if answer['autobt'] in options:
+                ind = options.index(answer['autobt'])
+            if ind == 0:
+                bot = self.bot_selector()
+            elif ind == 1:
+                file = pd.read_csv(self.file_selector())
+            elif ind == 2:
+                print(self.configs,self.bot)
+                bt_results = BotDB().iterate_csv(self.configs,self.bot,depth=50)
+            elif ind == 3:
+                break
+
+    def bot_selector(self):
+        # botlist = [{'guid':i.guid,'name':i.name,'roi':i.roi} for i in MadHatterBot().return_botlist()]
+        botlist = [{'value':i.guid,'name':f"{i.name},'Orders:'{len(i.completedOrders)},'Roi: ',{i.roi}"} for i in MadHatterBot().return_botlist()]
+        question = {
+                'type': 'list',
+                'name': 'bot',
+                'message': 'Please Select bot from list: ',
+                'choices': botlist
+            }
+        selection = prompt(question)
+        for b in MadHatterBot().return_botlist():
+            if selection['bot'] == b.guid:
+                self.bot = b
+        return self.bot
+
+    def file_selector(self):
+        files = BotDB().get_csv_files()
+        question ={
+                'type': 'list',
+                'name': 'file',
+                'message': 'Please Select file from list: ',
+                'choices': [i for i in files]
+            }
+        selection = prompt(question)
+        self.file = selection['file']
+        self.configs = BotDB().read_csv(self.file)
+        return self.file
 
 class MadHatterBot(Bot):
 
@@ -251,7 +415,7 @@ class MadHatterBot(Bot):
     def return_botlist(self):
         bl = self.c.customBotApi.get_all_custom_bots().result
         botlist = [x for x in bl if x.botType == 15]
-        # print(botlist)
+     
         return botlist
 
     def make_bot_from_bot_config(self, config, name):
@@ -289,31 +453,11 @@ class MadHatterBot(Bot):
                    "macdslow": str(bot.macd["MacdSlow"]),
                    "macdsign": str(bot.macd["MacdSign"]),
                    "roi": int(bot.roi),
-                   "trades": int(len(bot.completedOrders)),
-                   'orderbook': [{x: y for x, y in self.trades_to_df(bot).items()}]}
-
+                   "trades": int(len(bot.completedOrders))}
+        df = pd.DataFrame.from_dict([botdict])
         return df
 
-    def bruteforce_rsi_corridor(self, bot):
-        rsi_l = int(bot.rsi['RsiLength'])
-        applied = []
-        bots = []
-        print(rsi_l)
-        d = [x for x in [rsi_l, rsi_l+1, rsi_l+2]]
-        for x in d:
-            print(x)
-            botconfig = self.bot_config(bot)
-            # print(botconfig)
-            botconfig['rsil'] = x
-
-            config, botobj = self.setup(bot, botconfig)
-            applied.append(config)
-        for x in range(rsi_l-3, bot.rsi['RsiLength'], -1):
-            botconfig = self.bot_config(bot)
-            botconfig['rsil'] = x
-
-            config, botobj = self.setup(bot, botconfig)
-            applied.append(config)
+    
 
     def mad_hatter_base_parameters(self):
         ranges = {}
@@ -349,7 +493,7 @@ class MadHatterBot(Bot):
         else:
 
             completedOrders = [{'orderId': None, 'orderStatus': None, 'orderType': None, 'price': None,
-                                'amount': None, 'amountFilled': None, 'unixTimeStamp': datetime.today()}for x in range(1)]
+                                'amount': None, 'amountFilled': None, 'unixTimeStamp': datetime.datetime.today().year()}for x in range(1)]
             orders_df = pd.DataFrame(completedOrders)
         return orders_df
     # @sleep_and_retry
@@ -568,7 +712,7 @@ class MarketData(Haas):
 
     def to_df_for_ta(self, market_history):
 
-        market_data = [
+        market_data = [ 
             {
 
                 "Date": x.unixTimeStamp,
@@ -717,17 +861,559 @@ class MarketData(Haas):
 
 
 
-def main():
-    all_markets = MarketData().get_all_markets()
-    # print(all_markets.pricesource.unique())
-    # print(len(all_markets.pricesource.unique()))
-    # print(all_markets.primarycurrency.unique())
-    # print(len(all_markets.primarycurrency.unique()))
-    all_markets[['pricesource', 'primarycurrency', 'secondarycurrency']].to_csv('all_markets_pairs.csv')
-    all_markets[['primarycurrency', 'secondarycurrency']].to_csv('all_pairs.csv')
-    all_markets.pricesource.to_csv('all_exchanges.csv')
-    print(EnumPriceSource(all_markets.obj[0].priceSource))
-    # all_markets.to_csv('all_markets.csv')
-    print(all_markets.obj[0].priceSource)
+class InteractiveBT(Bot):
+    def __init__(self):
+        Bot.__init__(self)
+        self.indicator_vars = ['guid', 'RsiLength', 'RsiOversold', 'RsiOverbought', 'MacdFast', 'MacdSlow', 'MacdSign',
+                               'Length', 'Devup', 'Devdn', 'MaType', 'Deviation', 'ResetMid', 'AllowMidSell', 'RequireFcc', 'Interval']
+        self.indicators = ['rsi', 'bBands', 'macd']
+        self.interval = ['Interval', 'interval']
+        self.ticks =  Haas().read_ticks()
+        # self.B =  BotDB()
+
+    @sleep_and_retry
+    @limits(calls=2, period=1)
+    def return_botlist(self):
+
+        bl = self.c.customBotApi.get_all_custom_bots().result
+        botlist = [x for x in bl if x.botType == 15]
+        # print(botlist)
+        return botlist
+
+    def identify_bot(self, botlist):
+        self.print_user_message()
+        while True:
+            botlist2 = self.return_botlist()
+
+            lists = zip(botlist, botlist2)
+            for x in lists:
+                c = self.compare_indicators(x[0], x[1])
+                try:
+                    if len(c) != 0:
+                        # print('x1', x[1].name)
+                        return x[1]
+                        break
+
+                    else:
+                        self.identify_bot(botlist)
+                except:
+                    pass
+
+    @sleep_and_retry
+    @limits(calls=2, period=1)
+    def monitor_bot(self, bot):
+        botlist = self.return_botlist()
+
+        for bot2 in botlist:
+            if bot.guid == bot2.guid:
+                bot2 = bot2
+
+        try:
+            c = self.compare_indicators(bot, bot2)
+        except Exception as e:
+            print(e)
+
+        if len(c) != 0:
+            bt = self.bt_mh_on_update(bot)
+            os.system('clear')
+
+            return bt
+
+        else:
+            bt = self.monitor_bot(bot)
+
+    def compare_indicators(self, bot, bot2):
+        indicators = []
+        important_indicators = []
+        for b in [bot, bot2]:
+            important_indicators.append(('Interval:', b.interval))
+            for i in ['rsi', 'bBands', 'macd']:
+                try:
+                    indicators.append((i, b.__dict__[i]))
+                except Exception as e:
+                    # print('exception at compare', e)
+                    indicators.append((i, b.__dict__[i].__dict__))
+
+        for i in indicators:
+            for ii in i:
+                for v in ['RsiLength', 'RsiOversold', 'RsiOverbought', 'MacdFast', 'MacdSlow', 'MacdSign', 'Length', 'Devup', 'Devdn', 'MaType', 'Deviation', 'ResetMid', 'AllowMidSell', 'RequireFcc', 'Interval']:
+                    try:
+                        important_indicators.append((v, ii[v]))
+
+                    except Exception as e:
+                        # print('Exception on specific indicator params',e)
+                        pass
+
+                    try:
+                        important_indicators.append((v, ii.__dict__[v]))
+                        # print('try on the exception',v,ii.__dict__[v])
+                    except Exception as e:
+                        # print('indcators in compare indicator',e,v)
+                        pass
+
+        from collections import defaultdict
+        d = defaultdict(tuple)
+        for tup in important_indicators:
+            d[tup[0]] += (tup[1],)
+
+        with_diff = defaultdict(tuple)
+        try:
+            for tup in d:
+                # print()
+                try:
+                    diff = d[tup][0]-d[tup][1]
+                except:
+                    diff = 0
+                if diff != 0:
+                    with_diff[tup] = diff
+
+        except Exception as e:
+            print(e)
+
+        if len(with_diff) != 0:
+            return [(i, d[i], with_diff[i]) for i in d]
+
+    @sleep_and_retry
+    @limits(calls=2, period=1)
+    def bt_mh_on_update(self, bot):
+
+        bt = self.c.customBotApi.backtest_custom_bot(bot.guid, self.ticks)
+        try:
+            bot = MadHatterBot().return_bot(bt.result.guid)
+        except:
+            bot = MadHatterBot().return_bot(bot.guid)
+
+        if bt.errorCode != EnumErrorCode.SUCCESS:
+            os.system('clear')
+            print("bt", bt.errorCode, bt.errorMessage)
+
+            self.bt_mh_on_update(bot)
+
+        else:
+            print(bt.errorCode, bt.errorMessage, 'else')
+            return bt.result
+
+    def backtest(self,loop_count =1):
+        def to_df(sat):
+            df = pd.DataFrame(sat)
+            df.reset_index()
+            filename = (bot.name.replace('/','_')
+			+ str("_")
+			+ str(datetime.date.today().month)
+			+ str(datetime.date.today().day)
+			+ str("_")
+			+ str(len(sat)))
+            dfs = []
+            for i in sat:
+                config = MadHatterBot().bot_config(i)
+                dfs.append(config)
+               
+            configs = pd.concat(dfs)
+            configs.drop_duplicates()
+            configs.to_csv(f'{filename}.csv')
+            # print(f'Results are saved to {filename}.csv')
+            df.to_json(f'{filename}.json')
+            return df
+        sat = []
+
+        botlist = self.return_botlist()
+        bot = self.identify_bot(botlist)
+
+        sat.append(bot)
+        loops = []
+        # loop_count = 10
+
+        while True:
+            try:
+                bot2 = self.monitor_bot(bot)
+            except (KeyboardInterrupt, SystemExit):
+                print('Stopping and saving')
+                df = to_df(sat)
+            try:
+                if sat[-1].roi != bot2.roi:
+                    sat.append(bot2)
+                    loops = 0
+                else:
+                    if sat[-1].roi == bot2.roi:
+                        loops += 1
+            except Exception as e:
+                print(e)
+            print('Current ROI: ', bot2.roi, 'Best ROI:', sorted(
+                sat, key=lambda x: x.roi, reverse=True)[0].roi)
+            print('SAME_ROI Loop Count: ', loops)
+            print('AutoBT will stop on SAME_ROI Loop Count: ', loop_count)
+            print('Best Config: ')
+            best_config =  MadHatterBot().bot_config(sorted(
+                sat, key=lambda x: x.roi, reverse=True)[0])
+            print(best_config)
+            if loops == int(loop_count):
+                df = to_df(sat)
+                break
+    def load_results(self):
+        
+        files = self.B.get_csv_files()
+        file = self.B.select_from_list(files)
+        db = self.B.read_csv(file)
+        # print(db)
+        return db
+
+    def apply_config(self, bot, template):
+        B = BotDB()
+        try:
+            print('Applying bot configuration...')
+            result = B.setup_bot_from_obj(bot, template)
+            print('Config from *.json file detected')
+
+        except Exception:
+            print('Config from *.csv file detected')
+            result = B.setup_bot_from_csv(bot, template)
+        else:
+            print('Bot has not been configured due to some Error')
+        return result
+    def print_user_message(self):
+
+        print("")
+        print('InteractiveBT implies that you are manually changing bot parameters while backtesting is triggered automatically at a given interval or by a bot parameter change')
+        print('Every BT session, is saved on your drive. Session ends if the ROI of the last 10 backtests was exactly the same. Every config from it can be applied to any other MH bot afterwards')
+        print('Open any Mad-Hatter bot in FULL SCREEN, open BOT REMOTE to instantly see backtestin results, navigate to indicators tab, click on any parameter value. Now, with keyaboard arrow keys change the value up and down.')
+        print('TAB and SHIFT+TAB keys, provide you with immense speed of indicators navigation!') 
+        print('As long as typing coursor able to edit indicator values now, pressing TAB will move it to the next numeric parameter above. SHIFT+TAB moves it down.')
+        print('Parameters with options like MA type are skipped.')
+        print('bBands deviations have to be changed by quickly writing values down by numbers')
+        print('To begin the process, simply chose Mad-Hatter Bot and change a few params here and there with the above written method!')
+        print('Waiting for any MH bot parameter to change')
+
+class BotDB:
+    def __init__(self):
+        self.c = self.cnt()
+
+    def cnt(self):
+        ip, secret = Haas().read_config()
+        haasomeClient = HaasomeClient(ip, secret)
+        return haasomeClient
+
+    def csv_to_sellectionbox(self):
+        files = self.get_csv_files()
+
+        return files
+
+    def get_csv_files(self):
+        files = []
+        for file in os.listdir('./'):
+            # if file.endswith(".csv") or file.endswith('.json'):
+            if file.endswith(".csv"):
+                files.append(os.path.join('./', file))
+        return files
+    def select_from_list(self, files):
+        for i, file in enumerate(files):
+            print(i, file)
+        userinput = input('Type file number to select it:  ')
+        self.db_file = files[int(userinput)]
+        return files[int(userinput)]
+
+    def read_csv(self, file):
+        # This is how we turn CSV file from previous step into a DataFrame.
+        if file.endswith('.csv'):
+            try:
+                configs = pd.read_csv(file)
+                # print(configs[0])
+            except Exception as e:
+                print('csv',e)
+        elif file.endswith('.json'):
+
+            try:
+                configs=pd.read_json(file)
+                # print(configs[0])
+            except Exception as e:
+                print('json',e)
+            # configs.head()  # prints Dataframe Head
+        return configs
+
+
+    def get_mh_bots(self):
+        all_bots = BotSellector().get_all_custom_bots()  # getting all bots here
+        # sorting them to only Mad Hatter Bot(bot type 15 )
+        all_mh_bots = [x for x in all_bots if x.botType == 15]
+        opts = [[x.name, x] for x in all_mh_bots]  # making botlist with names
+        return opts
+
+    def setup_bot_from_csv(self, bot, config):
+
+        # if params differ - applies new one.
+        if bot.bBands["Length"] != config['bbl']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(  # this way less api calls is being made
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                0,
+                config['bbl']
+            )
+
+        if bot.bBands["Devup"] != config['devup']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                1,
+                config['devup'],
+            )
+
+        if bot.bBands["Devdn"] != config['devdn']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                2,
+                config['devdn'],
+            )
+
+        if bot.bBands["MaType"] != config['matype']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                3,
+                config['matype'],
+            )
+
+        if bot.bBands["AllowMidSell"] != config['allowmidsells']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                5,
+                config['allowmidsells'],
+            )
+
+        if bot.bBands["RequireFcc"] != config['fcc']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                6,
+                config['fcc'],
+            )
+
+        if bot.rsi["RsiLength"] != config['rsil']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.RSI,
+                0,
+                config['rsil'],
+            )
+
+        if bot.rsi["RsiOverbought"] != config['rsib']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.RSI,
+                1,
+                config['rsib'],
+            )
+
+        if bot.rsi["RsiOversold"] != config['rsis']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.RSI,
+                2,
+                config['rsis'],)
+
+        if bot.macd["MacdFast"] != config['macdfast']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.MACD,
+                0,
+                config['macdfast'],
+            )
+
+        if bot.macd["MacdSlow"] != config['macdslow']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.MACD,
+                1,
+                config['macdslow'],
+            )
+
+        if bot.macd["MacdSign"] != config['macdsign']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.MACD,
+                2,
+                config['macdsign'],
+            )
+
+    # calling it setup_bot_from_obj. It checks each parameter against new config.
+    def setup_bot_from_obj(self, bot, config):
+
+
+        if bot.bBands["Length"] != config.bBands['Length']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                0,
+                config.bBands['Length']
+            )
+
+        if bot.bBands["Devup"] != config.bBands['Devup']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                1,
+                config.bBands['Devup'],
+            )
+
+        if bot.bBands["Devdn"] != config.bBands['Devdn']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                2,
+                config.bBands['Devdn'],
+            )
+
+        if bot.bBands["MaType"] != config.bBands['MaType']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                3,
+                config.bBands['MaType'],
+            )
+
+        if bot.bBands["AllowMidSell"] != config.bBands['AllowMidSell']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                5,
+                config.bBands['AllowMidSell'],
+            )
+
+        if bot.bBands["RequireFcc"] != config.bBands['RequireFcc']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.BBANDS,
+                6,
+                config.bBands['RequireFcc'],
+            )
+
+        if bot.rsi["RsiLength"] != config.rsi['RsiLength']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.RSI,
+                0,
+                config.rsi['RsiLength'],
+            )
+
+        if bot.rsi["RsiOverbought"] != config.rsi['RsiOverbought']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.RSI,
+                1,
+                config.rsi['RsiOverbought'],
+            )
+
+        if bot.rsi["RsiOversold"] != config.rsi['RsiOversold']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.RSI,
+                2,
+                config.rsi['RsiOversold'],)
+
+        if bot.macd["MacdFast"] != config.macd['MacdFast']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.MACD,
+                0,
+                config.macd['MacdFast'],
+            )
+
+        if bot.macd["MacdSlow"] != config.macd['MacdSlow']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.MACD,
+                1,
+                config.macd['MacdSlow'],
+            )
+
+        if bot.macd["MacdSign"] != config.macd['MacdSign']:
+            do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
+                bot.guid,
+                EnumMadHatterIndicators.MACD,
+                2,
+                config.macd['MacdSign'],
+            )
+        if bot.interval != config.interval:
+            setup_bot_from_obj = self.c.customBotApi.setup_mad_hatter_bot(  # This code sets time interval as main goalj
+                botName=bot.name,
+                botGuid=bot.guid,
+                accountGuid=bot.accountId,
+                primaryCoin=bot.priceMarket.primaryCurrency,
+                secondaryCoin=bot.priceMarket.secondaryCurrency,
+                contractName=bot.priceMarket.contractName,
+                leverage=bot.leverage,
+                templateGuid=bot.customTemplate,
+                position=bot.coinPosition,
+                fee=bot.currentFeePercentage,
+                tradeAmountType=bot.amountType,
+                tradeAmount=bot.currentTradeAmount,
+                useconsensus=bot.useTwoSignals,
+                disableAfterStopLoss=bot.disableAfterStopLoss,
+                interval=config.interval,
+                includeIncompleteInterval=bot.includeIncompleteInterval,
+                mappedBuySignal=bot.mappedBuySignal,
+                mappedSellSignal=bot.mappedSellSignal,).result
+
+        print(bot.name, ' Has been configured')
+            #Indicator parameters have been set
+
+        if bot.interval != config.interval:
+            setup_bot_from_obj = self.c.customBotApi.setup_mad_hatter_bot(  # This code sets time interval as main goalj
+                botName=bot.name,
+                botGuid=bot.guid,
+                accountGuid=bot.accountId,
+                primaryCoin=bot.priceMarket.primaryCurrency,
+                secondaryCoin=bot.priceMarket.secondaryCurrency,
+                contractName=bot.priceMarket.contractName,
+                leverage=bot.leverage,
+                templateGuid=bot.customTemplate,
+                position=bot.coinPosition,
+                fee=bot.currentFeePercentage,
+                tradeAmountType=bot.amountType,
+                tradeAmount=bot.currentTradeAmount,
+                useconsensus=bot.useTwoSignals,
+                disableAfterStopLoss=bot.disableAfterStopLoss,
+                interval=config.interval,
+                includeIncompleteInterval=bot.includeIncompleteInterval,
+                mappedBuySignal=bot.mappedBuySignal,
+                mappedSellSignal=bot.mappedSellSignal,).result
+
+        print(bot.name, ' Has been configured')
+
+    # @lru_cache(maxsize=None)
+    def bt_bot(self, bot, depth):
+        bt = self.c.customBotApi.backtest_custom_bot(
+
+            bot.guid,
+            depth)
+
+        # print(btres.roi)
+        return bt.result
+
+    def iterate_csv(self, configs, bot, depth):
+        for i in configs.index:
+            config = configs.iloc[i]
+            self.setup_bot_from_csv(bot, config)
+            bt = self.c.customBotApi.backtest_custom_bot_on_market(
+                bot.accountId,
+                bot.guid,
+                int(depth),
+                bot.priceMarket.primaryCurrency,
+                bot.priceMarket.secondaryCurrency,
+                bot.priceMarket.contractName).result
+
+            configs['roi'][i] = bt.roi
+            print(bt.roi)
+        return configs
+
+    def verify_cfg(self):
+        c = ConfigParser
+
+
+def test_menu():
+    M = Main_Menu()
+    a = M.main_screen()
+
 if __name__ == "__main__":
-    main()
+    # main()
+    test_menu()

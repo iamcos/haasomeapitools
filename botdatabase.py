@@ -334,12 +334,12 @@ class BotDB:
 
         if index == None:
             for ind in configs.index:
-                self.setup_bot(bot, configs, ind)
+                self.setup_bot_from_obj(bot, configs, ind)
                 configs = self.bt_mh(bot, configs, ind)
                 BotDB().dataframe_to_csv(bot, configs)
             return configs.sort_values(by='roi', ascending=False)
         else:
-            self.setup_bot(bot, configs, int(index))
+            self.setup_bot_from_obj(bot, configs, int(index))
             configs = self.bt_mh(bot, configs, int(index))
             BotDB().dataframe_to_csv(bot, configs)
             return configs.sort_values(by='roi', ascending=False)
@@ -381,7 +381,7 @@ class BotDB:
         print(configs.head(20))
         return configs
 
-    def setup_bot(self, bot, configs, ind):
+    def setup_bot_from_obj(self, bot, configs, ind):
         if bot.bBands["Length"] != configs['bbl'][int(ind)]:
             do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
                 bot.guid,

@@ -28,7 +28,7 @@ from PyInquirer import (Token, ValidationError, Validator, print_json, prompt,
 from ratelimit import limits, sleep_and_retry
 from sendgrid.helpers.mail import *
 
-from BaseHaas import Bot, Haas, MadHatterBot
+# from BaseHaas import Bot, Haas, MadHatterBot
 from botdb import BotDB
 from botsellector import BotSellector
 
@@ -177,7 +177,27 @@ class InteractiveBT(Bot):
             print(bt.errorCode, bt.errorMessage, 'else')
             return bt.result
 
-    def backtest(self):
+    def backtest(self,loop_count =1):
+        def to_df(sat):
+            df = pd.DataFrame(sat)
+            df.reset_index()
+            filename = (bot.name.replace('/','_')
+			+ str("_")
+			+ str(datetime.date.today().month)
+			+ str(datetime.date.today().day)
+			+ str("_")
+			+ str(len(sat)))
+            dfs = []
+            for i in sat:
+                config = MadHatterBot().bot_config(i)
+                dfs.append(config)
+               
+            configs = pd.concat(dfs)
+            configs.drop_duplicates()
+            configs.to_csv(f'{filename}.csv')
+            # print(f'Results are saved to {filename}.csv')
+            df.to_json(f'{filename}.json')
+            return df
         sat = []
 
         botlist = self.return_botlist()
@@ -185,13 +205,14 @@ class InteractiveBT(Bot):
 
         sat.append(bot)
         loops = []
-        loop_count = 10
+        # loop_count = 10
 
         while True:
             try:
                 bot2 = self.monitor_bot(bot)
-            except KeyboardInterrupt:
-                raise
+            except (KeyboardInterrupt, SystemExit):
+                print('Stopping and saving')
+                df = to_df(sat)
             try:
                 if sat[-1].roi != bot2.roi:
                     sat.append(bot2)
@@ -205,23 +226,13 @@ class InteractiveBT(Bot):
                 sat, key=lambda x: x.roi, reverse=True)[0].roi)
             print('SAME_ROI Loop Count: ', loops)
             print('AutoBT will stop on SAME_ROI Loop Count: ', loop_count)
-
-            if loops == loop_count:
+            print('Best Config: ')
+            best_config =  MadHatterBot().bot_config(sorted(
+                sat, key=lambda x: x.roi, reverse=True)[0])
+            print(best_config)
+            if loops == int(loop_count):
+                df = to_df(sat)
                 break
-
-            df = pd.DataFrame(sat)
-            df.reset_index()
-            # print(df)
-            filename = (
-			str(bot.name)
-			+ str("_")
-			+ str(datetime.date.today()[1:2])
-			+ str("_")
-			+ str(len(sat)))
-            # df.to_json('current_bot.json')
-            # df.to_json(f'{filename}.json')
-            df.to_csv(f'{filename}.csv')
-
     def load_results(self):
         
         files = self.B.get_csv_files()
@@ -234,7 +245,7 @@ class InteractiveBT(Bot):
         B = BotDB()
         try:
             print('Applying bot configuration...')
-            result = B.setup_bot(bot, template)
+            result = B.setup_bot_from_obj(bot, template)
             print('Config from *.json file detected')
 
         except Exception:
