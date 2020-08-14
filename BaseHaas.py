@@ -15,9 +15,9 @@ from functools import lru_cache
 from pathlib import Path
 from random import random
 from time import sleep
-from prompt_toolkit.validation import Validator, ValidationError
+# from prompt_toolkit.validation import Validator, ValidationError
 
-import jsonpickle
+# import jsonpickle
 import pandas as pd
 import requests
 from examples import custom_style_2
@@ -85,14 +85,14 @@ class Haas():
                 'type': 'input',
                 'name': 'month',
                 'message': f'Write month (current is {str(datetime.datetime.today().month)}): ',
-                # 'default' : 
+             
 
             },
                                 {
                 'type': 'input',
                 'name': 'day',
                 'message': f'Write day (today is {str(datetime.datetime.today().day)}): ',
-                # 'default' :str(datetime.datetime.today().day)
+            
 
 
             },
@@ -100,7 +100,7 @@ class Haas():
                 'type': 'input',
                 'name': 'hour',
                 'message': f'Write  hour (now is {str(datetime.datetime.today().hour)}):',
-                # 'default' :str(datetime.datetime.today().hour)
+
 
 
             },
@@ -108,11 +108,11 @@ class Haas():
                 'type': 'input',
                 'name': 'min',
                 'message': f'Write min ( mins now {str(datetime.datetime.today().minute)}): ',
-                # 'default' :str(datetime.datetime.today().minute)
+
             }
             ]
         answers = prompt(bt_date)
-        # print(answers,'anasers')
+
         c['BT DATE'] = {'year':answers['year'], 'month':answers['month'], 'day':answers['day'],'hour':answers['hour'],'min':answers['min']}
         with open('config.ini','w') as configfile:
                 c.write(configfile)
@@ -292,21 +292,20 @@ class Main_Menu(Haas):
         self.file = None
         self.configs = None
 
-    def questions(self):
-    
-        return questions
 
     def main_screen(self):
     
         choices = [
-            'Start AutoBT',
-            'Backtest bot from config File',
-            'Apply configs from file to a bot',
+            'Find and save good configs: InteractiveBT',
+            'Backtest multiple configs on a bot',
+            'Autobacktest multiple bots',
+            'Select and apply config to bot',
             'Change backtesting starting date',
             'Change AutoBT loop Count',
             'Quit'
+            
         ]
-        loop_count = 3
+        loop_count = 10
        
         # os.system('clear')
         questions = {
@@ -328,48 +327,144 @@ class Main_Menu(Haas):
                 if ind == 0:
                     BT = InteractiveBT().backtest(loop_count)
                 elif ind == 1:
-            
                     bt = self.auto_bt_menu()
+                elif ind == 2:
+                    pass
                 elif ind == 3:
+                    self.apply_configs_menu()
+                elif ind == 4:
                     c = Haas().read_cfg()
                     Haas().write_date()
-                elif ind == 3:
+                elif ind == 5:
                     loop_count = input('Type New Loop Count: ')
                     print(f'Auto BT lool count has been set to: {loop_count}')
-                elif ind == 5:
+                elif ind == 6:
                     break
+
             except KeyError:
                 # os.system('clear')
                 print('\n\n     Mouse is not supported, use keyboard instead.\n\n')
         return answers
-  
+    
+    def apply_configs_menu(self):
+        options = ['Select Bot','Select file with configs','Apply configs','Main Menu']
+        config_questions = {
+            'type': 'list',
+            'name': 'response',
+            'message': 'Select an option: ',
+            'choices': options
+        }
+        while True:
+            response = prompt(config_questions)
+            if response['response'] in options:
+                ind = options.index(response['response'])
+            if ind == 0:
+                bot = self.bot_selector()
+            elif ind == 1:
+                file = pd.read_csv(self.file_selector())
+            elif ind == 2:
+                # print(self.configs)
+                
+               
+                configs = self.configs.sort_values(by='roi', ascending=False)
+                configs.drop_duplicates()
+                configs.reset_index(inplace=True,drop=True)
+                while True:
+                    print(configs)
+                    print('To apply bot type config number from the left column and hit return.')
+                    print('To return to the main menu, type q and hit return')
+                    resp = input('Config number: ')
+                    try: 
+                        if int(resp) >=0:
+                       
+                            BotDB().setup_bot_from_csv(self.bot,configs.iloc[int(resp)])
+                            # print(Haas().read_ticks)
+                            BotDB().bt_bot(self.bot,Haas().read_ticks())
+                        else:
+                            break
+                    except ValueError as e:
+                        break
+
+
+            elif ind == 3:
+                break
+
 
     def auto_bt_menu(self):
-
-        options = ['Select Bot','Select config file','Start Backtesting','Main Menu']
+        num_configs = 200
+        options = ['Select Bot','Select config file','Set Limit','Start Backtesting','Main Menu']
         question = {
             'type': 'list',
             'name': 'autobt',
             'message': 'Select action: ',
             'choices': options
         }
+
+        
         while True:
-            answer = prompt(question)
-            if answer['autobt'] in options:
-                ind = options.index(answer['autobt'])
+            response = prompt(question)
+            if response['autobt'] in options:
+                ind = options.index(response['autobt'])
             if ind == 0:
                 bot = self.bot_selector()
             elif ind == 1:
                 file = pd.read_csv(self.file_selector())
             elif ind == 2:
-                print(self.configs,self.bot)
-                bt_results = BotDB().iterate_csv(self.configs,self.bot,depth=50)
+                num_configs = int(input('Type the number of configs you wish to apply from a given file: '))
             elif ind == 3:
+                if num_configs>len(self.configs.index):
+                    num_configs == len(self.configs.index)
+                else:
+                    pass
+                configs = self.configs.sort_values(by='roi', ascending=False)[0:num_configs]
+                configs.drop_duplicates()
+                configs.reset_index(inplace=True,drop=True)
+                print(configs)
+                bt_results = BotDB().iterate_csv(configs,self.bot,depth = Haas().read_ticks())
+                filename = str(bot.name.replace('/','_'))+str("_")+str(datetime.date.today().month)+str('-')+str(datetime.date.today().day)+str("_")+str(len(bt_results))+str('.csv')
+                bt_results.to_csv(filename)
+            elif ind == 4:
+                break
+
+    def multiple_bot_auto_bt_menu(self):
+        num_configs = 200
+        options = ['Select Bots','Select config files','Set Limit per file','Start Backtesting','Main Menu']
+        question = {
+            'type': 'list',
+            'name': 'autobt',
+            'message': 'Select action: ',
+            'choices': options
+        }
+
+        
+        while True:
+            response = prompt(question)
+            if response['autobt'] in options:
+                ind = options.index(response['autobt'])
+            if ind == 0:
+                bot = self.multiple_bot_sellector()
+            elif ind == 1:
+                file = pd.read_csv(self.file_selector())
+            elif ind == 2:
+                num_configs = int(input('Type the number of configs you wish to apply from a given file: '))
+            elif ind == 3:
+                if num_configs>len(self.configs.index):
+                    num_configs == len(self.configs.index)
+                else:
+                    pass
+                configs = self.configs.sort_values(by='roi', ascending=False)[0:num_configs]
+                configs.drop_duplicates()
+                configs.reset_index(inplace=True,drop=True)
+                print(configs)
+                bt_results = BotDB().iterate_csv(configs,self.bot,depth = Haas().read_ticks())
+                filename = str(bot.name.replace('/','_'))+str("_")+str(datetime.date.today().month)+str('-')+str(datetime.date.today().day)+str("_")+str(len(bt_results))+str('.csv')
+                bt_results.to_csv(filename)
+            elif ind == 4:
                 break
 
     def bot_selector(self):
         # botlist = [{'guid':i.guid,'name':i.name,'roi':i.roi} for i in MadHatterBot().return_botlist()]
-        botlist = [{'value':i.guid,'name':f"{i.name},'Orders:'{len(i.completedOrders)},'Roi: ',{i.roi}"} for i in MadHatterBot().return_botlist()]
+        botlist = [{'value':i.guid,'name':f"{i.name},'Orders:'{len(i.completedOrders)},'Roi: ',{i.roi}\n\n"} for i in MadHatterBot().return_botlist()]
         question = {
                 'type': 'list',
                 'name': 'bot',
@@ -380,6 +475,21 @@ class Main_Menu(Haas):
         for b in MadHatterBot().return_botlist():
             if selection['bot'] == b.guid:
                 self.bot = b
+        return self.bot
+    def multiple_bot_sellector(self):
+        def bot_selector(self):
+        botlist = [{'value':i.guid,'name':f"{i.name},'Orders:'{len(i.completedOrders)},'Roi: ',{i.roi}\n\n"} for i in MadHatterBot().return_botlist()]
+        question = {
+                'type': 'checkbox',
+                'name': 'bots',
+                'message': 'Please Select bots from list: ',
+                'choices': botlist
+            }
+        selection = prompt(question)
+        for b in MadHatterBot().return_botlist():
+            if selection['bot'] == b.guid:
+                self.bot = b
+        print(self.bot)
         return self.bot
 
     def file_selector(self):
@@ -395,7 +505,21 @@ class Main_Menu(Haas):
         self.configs = BotDB().read_csv(self.file)
         return self.file
 
+    def miltiple_file_selector(self):
+        files = BotDB().get_csv_files()
+        question ={
+                'type': 'checkbox',
+                'name': 'file',
+                'message': 'Please Select file from list: ',
+                'choices': [i for i in files]
+            }
+        selection = prompt(question)
+        self.file = selection['file']
+        self.configs = BotDB().read_csv(self.file)
+        return self.file
+
 class MadHatterBot(Bot):
+
 
     def create_mh(self, input_bot, name):
         new_mad_hatter_bot = self.c.customBotApi.new_mad_hatter_bot_custom_bot(
@@ -434,27 +558,28 @@ class MadHatterBot(Bot):
         d = self.bruteforce_rsi_corridor(bot)
 
     def bot_config(self, bot):
-        botdict = {"pricesource": EnumPriceSource(bot.priceMarket.priceSource).name,
-                   "primarycoin": bot.priceMarket.primaryCurrency,
-                   "secondarycoin": bot.priceMarket.secondaryCurrency,
-                   "interval": int(bot.interval),
-                   "signalconsensus": bool(bot.useTwoSignals),
-                   "resetmiddle": bool(bot.bBands["ResetMid"]),
-                   "allowmidsells": bool(bot.bBands["AllowMidSell"]),
-                   "matype": bot.bBands["MaType"],
-                   "fcc": bool(bot.bBands["RequireFcc"]),
-                   "rsil": str(bot.rsi["RsiLength"]),
-                   "rsib": str(bot.rsi["RsiOversold"]),
-                   "rsis": str(bot.rsi["RsiOverbought"]),
-                   "bbl": str(bot.bBands["Length"]),
-                   "devup": str(bot.bBands["Devup"]),
-                   "devdn": str(bot.bBands["Devdn"]),
-                   "macdfast": str(bot.macd["MacdFast"]),
-                   "macdslow": str(bot.macd["MacdSlow"]),
-                   "macdsign": str(bot.macd["MacdSign"]),
-                   "roi": int(bot.roi),
-                   "trades": int(len(bot.completedOrders))}
+        botdict = {"roi": int(bot.roi),
+            "interval": int(bot.interval),
+            "signalconsensus": bool(bot.useTwoSignals),
+            "resetmiddle": bool(bot.bBands["ResetMid"]),
+            "allowmidsells": bool(bot.bBands["AllowMidSell"]),
+            "matype": bot.bBands["MaType"],
+            "fcc": bool(bot.bBands["RequireFcc"]),
+            "rsil": str(bot.rsi["RsiLength"]),
+            "rsib": str(bot.rsi["RsiOversold"]),
+            "rsis": str(bot.rsi["RsiOverbought"]),
+            "bbl": str(bot.bBands["Length"]),
+            "devup": str(bot.bBands["Devup"]),
+            "devdn": str(bot.bBands["Devdn"]),
+            "macdfast": str(bot.macd["MacdFast"]),
+            "macdslow": str(bot.macd["MacdSlow"]),
+            "macdsign": str(bot.macd["MacdSign"]),
+            "trades": int(len(bot.completedOrders))}
+            # "pricesource": EnumPriceSource(bot.priceMarket.priceSource).name,
+            # "primarycoin": bot.priceMarket.primaryCurrency,
+            # "secondarycoin": bot.priceMarket.secondaryCurrency,
         df = pd.DataFrame.from_dict([botdict])
+        
         return df
 
     
@@ -674,8 +799,6 @@ class TradeBot(Bot):
         indicator = self.select_indicator(indicators)
         return indicator
 
-
-
 class MarketData(Haas):
     def __init__(self):
         Haas.__init__(self)
@@ -856,10 +979,6 @@ class MarketData(Haas):
         ticker = self.c.marketDataApi.get_minute_price_ticker_from_market(marketobj)
         df = self.to_df_for_ta(ticker.result)
         return df
-    
-
-
-
 
 class InteractiveBT(Bot):
     def __init__(self):
@@ -912,12 +1031,14 @@ class InteractiveBT(Bot):
             c = self.compare_indicators(bot, bot2)
         except Exception as e:
             print(e)
+        try:
+            if len(c) != 0:
+                bt = self.bt_mh_on_update(bot)
+                os.system('clear')
 
-        if len(c) != 0:
-            bt = self.bt_mh_on_update(bot)
-            os.system('clear')
-
-            return bt
+                return bt
+        except:
+            pass
 
         else:
             bt = self.monitor_bot(bot)
@@ -997,12 +1118,7 @@ class InteractiveBT(Bot):
         def to_df(sat):
             df = pd.DataFrame(sat)
             df.reset_index()
-            filename = (bot.name.replace('/','_')
-			+ str("_")
-			+ str(datetime.date.today().month)
-			+ str(datetime.date.today().day)
-			+ str("_")
-			+ str(len(sat)))
+                
             dfs = []
             for i in sat:
                 config = MadHatterBot().bot_config(i)
@@ -1010,9 +1126,11 @@ class InteractiveBT(Bot):
                
             configs = pd.concat(dfs)
             configs.drop_duplicates()
-            configs.to_csv(f'{filename}.csv')
+            filename = str(bot.name.replace('/','_'))+str("_")+str(datetime.date.today().month)+str('-')+str(datetime.date.today().day)+str("_")+str(len(configs))+str('.csv')
+            
+            configs.to_csv(filename)
             # print(f'Results are saved to {filename}.csv')
-            df.to_json(f'{filename}.json')
+            # df.to_json(f'{filename}.json')
             return df
         sat = []
 
@@ -1037,7 +1155,7 @@ class InteractiveBT(Bot):
                     if sat[-1].roi == bot2.roi:
                         loops += 1
             except Exception as e:
-                print(e)
+                continue
             print('Current ROI: ', bot2.roi, 'Best ROI:', sorted(
                 sat, key=lambda x: x.roi, reverse=True)[0].roi)
             print('SAME_ROI Loop Count: ', loops)
@@ -1403,7 +1521,8 @@ class BotDB:
                 bot.priceMarket.contractName).result
 
             configs['roi'][i] = bt.roi
-            print(bt.roi)
+            print('\n\n     Current Backtest ROI: ', bt.roi,'%')
+            print(configs.iloc[i].T)
         return configs
 
     def verify_cfg(self):
@@ -1411,9 +1530,15 @@ class BotDB:
 
 
 def test_menu():
-    M = Main_Menu()
-    a = M.main_screen()
-
+    if datetime.date.today()< datetime.date(2020,8,24):
+        M = Main_Menu()
+        a = M.main_screen()
+    else:
+        print('Trial has ended. Contact Cosmos directly via twitter or discord for more.')
+        time.sleep(120)
+        print('Exiting ...')
+        time.sleep(5)
+        
 if __name__ == "__main__":
     # main()
     test_menu()

@@ -164,8 +164,8 @@ class BotDB:
                 config['macdsign'],
             )
 
-    # calling it setup_bot. It checks each parameter against new config.
-    def setup_bot(self, bot, config):
+    # calling it setup_bot_from_obj. It checks each parameter against new config.
+    def setup_bot_from_obj(self, bot, config):
 
 
         if bot.bBands["Length"] != config.bBands['Length']:
@@ -263,7 +263,7 @@ class BotDB:
                 config.macd['MacdSign'],
             )
         if bot.interval != config.interval:
-            setup_bot = self.c.customBotApi.setup_mad_hatter_bot(  # This code sets time interval as main goalj
+            setup_bot_from_obj = self.c.customBotApi.setup_mad_hatter_bot(  # This code sets time interval as main goalj
                 botName=bot.name,
                 botGuid=bot.guid,
                 accountGuid=bot.accountId,
@@ -287,7 +287,7 @@ class BotDB:
             #Indicator parameters have been set
 
         if bot.interval != config.interval:
-            setup_bot = self.c.customBotApi.setup_mad_hatter_bot(  # This code sets time interval as main goalj
+            setup_bot_from_obj = self.c.customBotApi.setup_mad_hatter_bot(  # This code sets time interval as main goalj
                 botName=bot.name,
                 botGuid=bot.guid,
                 accountGuid=bot.accountId,
@@ -329,7 +329,7 @@ class BotDB:
                 bot.guid,
                 int(depth),
                 bot.priceMarket.primaryCurrency,
-                bot.priceMarket.secondaryCurrency,
+                bot.priceMarket.secondaryCurrencyn,
                 bot.priceMarket.contractName).result
             # bt = self.bt_bot(bot,depth)
             configs['roi'][i] = bt.roi

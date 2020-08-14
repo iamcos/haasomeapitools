@@ -28,7 +28,7 @@ from PyInquirer import (Token, ValidationError, Validator, print_json, prompt,
 from ratelimit import limits, sleep_and_retry
 from sendgrid.helpers.mail import *
 
-# from BaseHaas import Bot, Haas, MadHatterBot
+from BaseHaas import Bot, Haas, MadHatterBot
 from botdb import BotDB
 from botsellector import BotSellector
 
