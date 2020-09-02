@@ -9,6 +9,8 @@ import pickle
 import time
 import timeit
 import zlib
+from tqdm import tqdm
+from tqdm.auto import trange
 # from datetime import datetime
 import datetime
 from functools import lru_cache
@@ -16,7 +18,7 @@ from pathlib import Path
 from random import random
 from time import sleep
 # from prompt_toolkit.validation import Validator, ValidationError
-
+from haasomeapi.apis.AccountDataApi import AccountDataApi as acc
 # import jsonpickle
 import pandas as pd
 import requests
@@ -29,6 +31,7 @@ from haasomeapi.enums.EnumMadHatterSafeties import EnumMadHatterSafeties
 from haasomeapi.enums.EnumPriceSource import EnumPriceSource
 from haasomeapi.HaasomeClient import HaasomeClient
 from numpy import arange
+import numpy as np
 from PyInquirer import (Token, Separator,ValidationError, Validator, print_json, prompt ,style_from_dict)
 from ratelimit import limits, sleep_and_retry
 # from autobt import InteractiveBT
@@ -36,7 +39,8 @@ import configserver
 import interval as iiv
 # from botdb import BotDB
 from botsellector import BotSellector
-
+import inquirer
+from alive_progress import alive_bar
 
 class Haas():
 
@@ -296,12 +300,12 @@ class Main_Menu(Haas):
     def main_screen(self):
     
         choices = [
-            'Find and save good configs: InteractiveBT',
-            'Backtest multiple configs on a bot',
+            'Find and save good configs: AssistedBT',
+            "Bruteforce Scalper Bots (bonus feature)",
             'Autobacktest multiple bots',
             'Select and apply config to bot',
             'Change backtesting starting date',
-            'Change AutoBT loop Count',
+            'Change AssistedBT loop Count',
             'Quit'
             
         ]
@@ -327,9 +331,9 @@ class Main_Menu(Haas):
                 if ind == 0:
                     BT = InteractiveBT().backtest(loop_count)
                 elif ind == 1:
-                    bt = self.auto_bt_menu()
+                    scalper_test_menu()
                 elif ind == 2:
-                    pass
+                    bt = self.multiple_bot_auto_bt_menu()
                 elif ind == 3:
                     self.apply_configs_menu()
                 elif ind == 4:
@@ -391,7 +395,7 @@ class Main_Menu(Haas):
 
 
     def auto_bt_menu(self):
-        num_configs = 200
+        self.num_configs = 200
         options = ['Select Bot','Select config file','Set Limit','Start Backtesting','Main Menu']
         question = {
             'type': 'list',
@@ -410,13 +414,13 @@ class Main_Menu(Haas):
             elif ind == 1:
                 file = pd.read_csv(self.file_selector())
             elif ind == 2:
-                num_configs = int(input('Type the number of configs you wish to apply from a given file: '))
+                self.num_configs = int(input('Type the number of configs you wish to apply from a given file: '))
             elif ind == 3:
-                if num_configs>len(self.configs.index):
-                    num_configs == len(self.configs.index)
+                if self.num_configs>len(self.configs.index):
+                    self.num_configs == len(self.configs.index)
                 else:
                     pass
-                configs = self.configs.sort_values(by='roi', ascending=False)[0:num_configs]
+                configs = self.configs.sort_values(by='roi', ascending=False)[0:self.num_configs]
                 configs.drop_duplicates()
                 configs.reset_index(inplace=True,drop=True)
                 print(configs)
@@ -426,42 +430,69 @@ class Main_Menu(Haas):
             elif ind == 4:
                 break
 
-    def multiple_bot_auto_bt_menu(self):
-        num_configs = 200
-        options = ['Select Bots','Select config files','Set Limit per file','Start Backtesting','Main Menu']
-        question = {
-            'type': 'list',
-            'name': 'autobt',
-            'message': 'Select action: ',
-            'choices': options
-        }
-
+    def multiple_bot_auto_bt_menu(self): 
+        self.num_configs = 200
+        self.limit = 3
+        menu = [inquirer.List('response',message='Please chose an action:',choices=['Select Bots','Select config file','Set configs limit','Set create limit','Start Backtesting','Main Menu'])]
         
         while True:
-            response = prompt(question)
-            if response['autobt'] in options:
-                ind = options.index(response['autobt'])
-            if ind == 0:
+            user_response = inquirer.prompt(menu)['response']
+            if user_response == 'Select Bots':
                 bot = self.multiple_bot_sellector()
-            elif ind == 1:
+            elif user_response == 'Select config file':
                 file = pd.read_csv(self.file_selector())
-            elif ind == 2:
-                num_configs = int(input('Type the number of configs you wish to apply from a given file: '))
-            elif ind == 3:
-                if num_configs>len(self.configs.index):
-                    num_configs == len(self.configs.index)
-                else:
+            elif user_response == 'Set configs limit':
+                try: 
+                    
+                    num_configs = [inquirer.Text('num_configs',message='Type the number of configs you wish to apply from a given file: ')]
+                    self.num_configs = int(inquirer.prompt(num_configs)['num_configs'])
+                except ValueError:
+                    print('Invalid input value for the number of configs to apply from a given file. Please type a digit:')
+                    num_configs = [inquirer.Text('num_configs',message='Type the number of configs you wish to apply from a given file: ')]
+                    self.num_configs = int(inquirer.prompt(num_configs)['num_configs'])
+
+            elif user_response == 'Set create limit':
+                create_limit = [inquirer.Text('step',message='Type how many top bots to create ')]
+                create_limit_response = inquirer.prompt(create_limit)['step']
+                self.limit = int(create_limit_response)
+          
+                if int(self.limit) >= 1:
                     pass
-                configs = self.configs.sort_values(by='roi', ascending=False)[0:num_configs]
-                configs.drop_duplicates()
-                configs.reset_index(inplace=True,drop=True)
-                print(configs)
-                bt_results = BotDB().iterate_csv(configs,self.bot,depth = Haas().read_ticks())
-                filename = str(bot.name.replace('/','_'))+str("_")+str(datetime.date.today().month)+str('-')+str(datetime.date.today().day)+str("_")+str(len(bt_results))+str('.csv')
-                bt_results.to_csv(filename)
-            elif ind == 4:
+                else:
+                    self.limit = 0
+                
+            elif user_response == 'Start Backtesting':
+                self.bt()
+            elif user_response == 'Main Menu':
                 break
 
+     
+                    
+
+   
+    def bt(self):
+        for b in self.bot:
+            if self.num_configs>len(self.configs.index):
+                self.num_configs == len(self.configs.index)
+            else:
+                pass
+        
+            configs = self.configs.sort_values(by='roi', ascending=False)[0:self.num_configs]
+            configs.drop_duplicates()
+            configs.reset_index(inplace=True,drop=True)
+            # print(configs)
+            bt_results = BotDB().iterate_csv(configs,b,depth = Haas().read_ticks())
+            filename = str(b.name.replace('/','_'))+str("_")+str(datetime.date.today().month)+str('-')+str(datetime.date.today().day)+str("_")+str(len(bt_results))+str('multi.csv')
+            bt_results.sort_values(by='roi', ascending=False, inplace=True)
+            bt_results.drop_duplicates()
+            bt_results.reset_index(inplace=True,drop=True)
+            bt_results.to_csv(filename)
+            if self.limit:
+                for c in range(self.limit):
+                    new_bot = MadHatterBot().c.customBotApi.clone_custom_bot_simple(b.accountId,b.guid,b.name).result
+                    # print(new_bot)
+                    new_bot = BotDB().bt_bot(new_bot, Haas().read_ticks())
+                    BotDB().setup_bot_from_csv(new_bot,bt_results.iloc[c])
     def bot_selector(self):
         # botlist = [{'guid':i.guid,'name':i.name,'roi':i.roi} for i in MadHatterBot().return_botlist()]
         botlist = [{'value':i.guid,'name':f"{i.name},'Orders:'{len(i.completedOrders)},'Roi: ',{i.roi}\n\n"} for i in MadHatterBot().return_botlist()]
@@ -477,23 +508,22 @@ class Main_Menu(Haas):
                 self.bot = b
         return self.bot
     def multiple_bot_sellector(self):
-        def bot_selector(self):
-        botlist = [{'value':i.guid,'name':f"{i.name},'Orders:'{len(i.completedOrders)},'Roi: ',{i.roi}\n\n"} for i in MadHatterBot().return_botlist()]
-        question = {
-                'type': 'checkbox',
-                'name': 'bots',
-                'message': 'Please Select bots from list: ',
-                'choices': botlist
-            }
-        selection = prompt(question)
-        for b in MadHatterBot().return_botlist():
-            if selection['bot'] == b.guid:
-                self.bot = b
-        print(self.bot)
-        return self.bot
+        print('BB')
+        bots = MadHatterBot().return_botlist()
+        b2 = [(f'{i.name} {i.priceMarket.primaryCurrency}-{i.priceMarket.secondaryCurrency}, {i.roi}', i) for i in bots]
+        print('BB')
+        question = [inquirer.Checkbox('bots',message='Select one or more bots using spacebar and then press return',choices = b2)]
+        selection = inquirer.prompt(question)
+        try:
+            self.bot = selection['bots']
+        except TypeError:
+            print('No bot has been selected, you must select one')
+            self.multiple_bot_sellector()
+        return selection['bots']
 
     def file_selector(self):
         files = BotDB().get_csv_files()
+        print(files[0:5])
         question ={
                 'type': 'list',
                 'name': 'file',
@@ -504,19 +534,7 @@ class Main_Menu(Haas):
         self.file = selection['file']
         self.configs = BotDB().read_csv(self.file)
         return self.file
-
-    def miltiple_file_selector(self):
-        files = BotDB().get_csv_files()
-        question ={
-                'type': 'checkbox',
-                'name': 'file',
-                'message': 'Please Select file from list: ',
-                'choices': [i for i in files]
-            }
-        selection = prompt(question)
-        self.file = selection['file']
-        self.configs = BotDB().read_csv(self.file)
-        return self.file
+   
 
 class MadHatterBot(Bot):
 
@@ -682,7 +700,127 @@ class MadHatterBot(Bot):
         bot = self.c.customBotApi.get_custom_bot(
         guid, EnumCustomBotType.MAD_HATTER_BOT).result
         return bot
+class ScalperBotClass(Bot):
+    def __init__(self):
+        Bot.__init__(self)
+        self.ticks = Haas().read_ticks()
+    def  return_scalper_bots(self):
+    
+        bl = self.c.customBotApi.get_all_custom_bots().result
+        botlist = [x for x in bl if x.botType == 3]
+        return botlist
 
+    def bot_selector(self):
+        bots = self.return_scalper_bots()
+        b2 = [(f'{i.name} {i.priceMarket.primaryCurrency}-{i.priceMarket.secondaryCurrency}, {i.roi}', i) for i in bots]
+        question = [inquirer.Checkbox('bots',message='Select one or more bots using spacebar and then press return',choices = b2)]
+        selection = inquirer.prompt(question)
+        try:
+            self.bot = selection['bots']
+        except TypeError:
+            print('No bot has been selected, you must select one')
+            self.bot_selector()
+        return selection['bots']    
+    def markets_selector(self):
+        
+        markets = self.c.marketDataApi.get_all_price_markets().result
+        m2 = [(f'{EnumPriceSource(i.priceSource).name},{i.primaryCurrency}-{i.secondaryCurrency}',i) for i in markets]
+     
+        question = [inquirer.Checkbox('markets',message="Select markets",choices=m2)]
+     
+        selection = inquirer.prompt(question)
+        self.markets = selection['markets']
+        # print(selection)
+        return selection
+
+    def setup_scalper_bot(self,bot,targetpercentage,safetythreshold):
+
+        do = self.c.customBotApi.setup_scalper_bot(accountguid= bot.accountId,botguid=bot.guid,botname=bot.name,primarycoin=bot.priceMarket.primaryCurrency,secondarycoin=bot.priceMarket.secondaryCurrency, templateguid=bot.customTemplate,contractname=bot.priceMarket.contractName,leverage= bot.leverage, amountType=bot.amountType,tradeamount= bot.currentTradeAmount, position = bot.coinPosition, fee=bot.currentFeePercentage, targetpercentage=targetpercentage,safetythreshold=safetythreshold)
+        print('result: ',do.errorCode, do.errorMessage)
+        return do.result
+    
+    def set_targetpercentage_range(self):
+        start_input = [inquirer.Text('start',message='Define start of the target percentage range',default=0.5)]
+        end_input = [inquirer.Text('end',message='Define end of the target percentage range',default=1.5)]
+        step_input = [inquirer.Text('step',message='Define number of steps between start and end',default=0.2)]
+
+        start = inquirer.prompt(start_input)['start']
+        end = inquirer.prompt(end_input)['end']
+        step = inquirer.prompt(step_input)['step']
+        self.targetpercentage = [start,end,step]
+
+    
+    def set_safetythreshold_range(self):
+        start_input = [inquirer.Text('start',message='Define start of the safety threshold range',default=97)]
+        end_input = [inquirer.Text('end',message='Define end of the safety threshold range',default=98)]
+        step_input = [inquirer.Text('step',message='Define number of steps between start and end',default=0.2)]
+
+        start = inquirer.prompt(start_input)['start']
+        end = inquirer.prompt(end_input)['end']
+        step = inquirer.prompt(step_input)['step']
+        self.safetythreshold = [start,end,step]
+    
+    def backtest(self):
+        # def to_df(results):
+        #     configs = pd.DataFrame(results,columns=['roi','safetythreshold','targetpercentage'])
+        #     configs.drop_duplicates()
+        #     configs.sort_values(by='roi', ascending=False)
+        #     configs.reset_index(inplace=True,drop=True)
+        #     return configs
+       
+        
+        if len(self.bot)>0:
+           with alive_bar(len(self.bot)) as bar: 
+            for bot in self.bot:
+
+                results = []
+                columns = ['roi','safetythreshold','targetpercentage']
+                
+                for s in tqdm(np.arange(float(self.safetythreshold[0]),float(self.safetythreshold[1]),float(self.safetythreshold[2]))):
+
+
+                    for t in tqdm(np.arange(float(self.targetpercentage[0]),float(self.targetpercentage[1]),float(self.targetpercentage[2]))):
+
+                        self.setup_scalper_bot(bot,targetpercentage=round(t,2),safetythreshold=round(s,2))
+                        
+                        bt_result = self.c.customBotApi.backtest_custom_bot(bot.guid, self.ticks)
+                        bt_result = bt_result.result
+                        print('ROI: ',bt_result.roi, round(t,2))
+                        total_results = {'roi':bt_result.roi,'targetpercentage':round(t,2),'safetythreshold':round(s,2)}
+                  
+                       
+                        # results.append(total_results)
+                        results.append([bt_result.roi,round(t,2),round(s,2)])
+                df_res = pd.DataFrame(results, columns=columns, index=range(len(results)))
+                df_res.sort_values(by='roi', ascending=False, inplace=True)
+                df_res.reset_index(inplace=True,drop=True)
+                print(df_res)
+                self.setup_scalper_bot(bot,df_res.safetythreshold.iloc[0],df_res.targetpercentage.iloc[0])
+                self.c.customBotApi.backtest_custom_bot(bot.guid, self.ticks)
+                
+            
+
+        else:
+            self.bot_selector()
+
+    def scalper_bot_menu(self):
+        # choices = 
+        menu = [inquirer.List('response',message='Please chose an action:',choices=['Select bots','Set range for safety threshold','Set range for target percentage','Backtest','Main menu'])]
+        
+        while True:
+            user_response = inquirer.prompt(menu)['response']
+            if user_response == 'Select bots':
+                self.bot_selector()
+            elif user_response == 'Set range for safety threshold':
+                self.set_safetythreshold_range()
+            elif user_response == 'Set range for target percentage':
+                self.set_targetpercentage_range()
+            elif user_response == 'Backtest':
+                self.backtest()
+            elif user_response == 'Main menu':
+                break
+
+        
 
 class TradeBot(Bot):
 
@@ -914,7 +1052,7 @@ class MarketData(Haas):
         return f"sucessfully saved {filename} to market_data folder, with {len(marketData)} ticks included"
 
     def read_csv(self,file,nrows=None):
-        data = pd.read_csv(file,nrows=nrows)
+        data = BotDB().read_csv(file,nrows=nrows)
         def uppercase(x): return str(x).capitalize()
         data.rename(uppercase, axis='columns', inplace=True)
         data['Data'] = pd.to_datetime(data['Data'])
@@ -1131,7 +1269,7 @@ class InteractiveBT(Bot):
             configs.to_csv(filename)
             # print(f'Results are saved to {filename}.csv')
             # df.to_json(f'{filename}.json')
-            return df
+            return configs
         sat = []
 
         botlist = self.return_botlist()
@@ -1191,7 +1329,7 @@ class InteractiveBT(Bot):
     def print_user_message(self):
 
         print("")
-        print('InteractiveBT implies that you are manually changing bot parameters while backtesting is triggered automatically at a given interval or by a bot parameter change')
+        print('InteractiveBT, or AssistedBT implies that you are manually changing bot parameters while backtesting is triggered automatically at a given interval or by a bot parameter change')
         print('Every BT session, is saved on your drive. Session ends if the ROI of the last 10 backtests was exactly the same. Every config from it can be applied to any other MH bot afterwards')
         print('Open any Mad-Hatter bot in FULL SCREEN, open BOT REMOTE to instantly see backtestin results, navigate to indicators tab, click on any parameter value. Now, with keyaboard arrow keys change the value up and down.')
         print('TAB and SHIFT+TAB keys, provide you with immense speed of indicators navigation!') 
@@ -1237,16 +1375,9 @@ class BotDB:
                 # print(configs[0])
             except Exception as e:
                 print('csv',e)
-        elif file.endswith('.json'):
-
-            try:
-                configs=pd.read_json(file)
-                # print(configs[0])
-            except Exception as e:
-                print('json',e)
-            # configs.head()  # prints Dataframe Head
-        return configs
-
+            return configs
+        else:
+            return 'csv was not read'
 
     def get_mh_bots(self):
         all_bots = BotSellector().get_all_custom_bots()  # getting all bots here
@@ -1509,36 +1640,65 @@ class BotDB:
         return bt.result
 
     def iterate_csv(self, configs, bot, depth):
-        for i in configs.index:
-            config = configs.iloc[i]
-            self.setup_bot_from_csv(bot, config)
-            bt = self.c.customBotApi.backtest_custom_bot_on_market(
-                bot.accountId,
-                bot.guid,
-                int(depth),
-                bot.priceMarket.primaryCurrency,
-                bot.priceMarket.secondaryCurrency,
-                bot.priceMarket.contractName).result
+        best_roi = 0
+        
+        markets = self.c.marketDataApi.get_price_markets(bot.priceMarket.priceSource).result
+        for market in markets:
+            if market.primaryCurrency == bot.priceMarket.primaryCurrency:
+                if market.secondaryCurrency == bot.priceMarket.secondaryCurrency:
+                    if bot.currentTradeAmount< market.minimumTradeAmount:
+                        bot.currentTradeAmount = market.minimumTradeAmount
+        with alive_bar(len(configs.index), title = f"{bot.name} backtesting in progress") as bar:
+           
+            for i in configs.index:
+                os.system('clear')
+                config = configs.iloc[i]
+                self.setup_bot_from_csv(bot, config)
+                bt = self.c.customBotApi.backtest_custom_bot_on_market(
+                    bot.accountId,
+                    bot.guid,
+                    int(depth),
+                    bot.priceMarket.primaryCurrency,
+                    bot.priceMarket.secondaryCurrency,
+                    bot.priceMarket.contractName).result
+                if bt.roi > best_roi:
+                    best_roi = bt.roi
+                configs['roi'][i] = bt.roi
+                
+                print('\n\n     Current Backtest ROI: ', bt.roi,'%','best ROI:', best_roi,'%')
+                
+                bar()
 
-            configs['roi'][i] = bt.roi
-            print('\n\n     Current Backtest ROI: ', bt.roi,'%')
-            print(configs.iloc[i].T)
-        return configs
+                
+            return configs
 
     def verify_cfg(self):
         c = ConfigParser
 
 
-def test_menu():
+def time_limited_test_menu():
     if datetime.date.today()< datetime.date(2020,8,24):
-        M = Main_Menu()
-        a = M.main_screen()
+        test_menu()
     else:
         print('Trial has ended. Contact Cosmos directly via twitter or discord for more.')
         time.sleep(120)
         print('Exiting ...')
         time.sleep(5)
-        
+def test_menu():
+    M = Main_Menu()
+    a = M.main_screen()
+
+
+def scalper_test_menu():
+    # sc = ScalperBotClass().return_scalper_bots()
+    # print(sc)
+    s = ScalperBotClass()
+    bots = s.scalper_bot_menu()
+
+
+
+    # ms = ScalperBotClass().markets_selector()
 if __name__ == "__main__":
     # main()
     test_menu()
+    
