@@ -1,4 +1,4 @@
-mkdir -p '~/.streamlit/'
+mkdir -p ~/.streamlit/
 echo "\
 [general]\n\
 email = \"prostocosmos@protonmail.com\"\n\
