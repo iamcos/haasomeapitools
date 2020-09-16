@@ -1,8 +1,8 @@
-mkdir -p ~/.streamlit/
+mkdir -p '~/.streamlit/'
 echo "\
 [general]\n\
 email = \"prostocosmos@protonmail.com\"\n\
-" > .streamlit/credentials.toml
+" > ~/.streamlit/credentials.toml
 echo "\
 [server]\n\
 headless = true\n\

@@ -113,7 +113,7 @@ def candlestick_plot(df, namemd):
     fig.title.text_font_size = "18pt"
     fig.yaxis[0].formatter = NumeralTickFormatter(format="$5.2f")
     inc = df.Close > df.Open
-    dec = ~inc
+    dec = inc
 
     # Colour scheme for increasing and descending candles
     INCREASING_COLOR = '#009E73'
