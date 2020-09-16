@@ -6,6 +6,7 @@ import numpy as np
 import plotly.figure_factory as ff
 from BaseHaas import MarketData as md
 from BaseHaas import Haas
+from haasomeapi.HaasomeClient import HaasomeClient
 import dtale
 import os
 from bokeh.plotting import figure, ColumnDataSource
@@ -24,18 +25,30 @@ from haasomeapi.enums.EnumPriceSource import EnumPriceSource
 from ratelimit import limits, sleep_and_retry
 # data_load_state = st.text('Loading data...')
 
+def get_creds(md):
+        ip = st.sidebar.text_input('Server ip: ')
+        port = st.sidebar.text_input('Server port:')
+        secret = st.sidebar.text_input('API key/secret: ')
 
+        ip = str('http://'+ip+':'+port)
+        md.c = HaasomeClient(ip,secret)
+        return md()
 
-def market_selector():
-    markets = md().get_all_markets()
+md = get_creds(md)
+
+def market_selector(md):
+    
+
+    
+    markets = md.get_all_markets()
     pricesource = st.sidebar.selectbox(
         'Select Exchange',
         (markets.pricesource.unique()), index=2)
 
     primarycurrency = st.sidebar.selectbox(
-        'Primary coin', (md().primarycoin_dropdown(pricesource)))
-    secondarycurrency = st.sidebar.selectbox('Secondary coin',(md().secondary_coin_dropdown(pricesource,primarycurrency)))
-    market_object = md().return_priceMarket_object(pricesource,primarycurrency,secondarycurrency)
+        'Primary coin', (md.primarycoin_dropdown(pricesource)))
+    secondarycurrency = st.sidebar.selectbox('Secondary coin',(md.secondary_coin_dropdown(pricesource,primarycurrency)))
+    market_object = md.return_priceMarket_object(pricesource,primarycurrency,secondarycurrency)
     st.title(
         f'Haasonline market data dashboard. {pricesource},{primarycurrency},{secondarycurrency}')
     return market_object
@@ -43,9 +56,9 @@ def market_selector():
 
 
 
-def get_data(marketobject, interval, ticks):
+def get_data(marketobject, interval, ticks,md):
     print('interval', interval,'ti cks', ticks)
-    data = md().get_market_data(marketobject, interval, ticks)
+    data = md.get_market_data(marketobject, interval, ticks)
     data['Open'] = data['open']
     data['Date'] = data['date']
     data['Close'] = data['close']
@@ -57,9 +70,9 @@ def get_data(marketobject, interval, ticks):
     return data
 
 
-def get_data2(marketobject, interval, ticks):
-    print('interval', interval,'ti cks', ticks)
-    data = md().get_market_data(marketobject, interval, ticks)
+def get_data2(marketobject, interval, ticks,md):
+    # print('interval', interval,'ti cks', ticks)
+    data = md.get_market_data(marketobject, interval, ticks)
 
     data.reset_index(inplace=True)
     # data.set_index('Date')
@@ -68,11 +81,11 @@ def get_data2(marketobject, interval, ticks):
 
 
 # @st.cache
-def cleanString(string):
+def cleanString(stringmd):
     return string.translate({ord('$'): None})
  
 
-def candlestick_plot(df, name):
+def candlestick_plot(df, namemd):
     # Select the datetime format for the x axis depending on the timeframe
     xaxis_dt_format = '%d %b %Y'
 
@@ -212,7 +225,7 @@ def candlestick_plot(df, name):
     return fig
 
 
-market = market_selector()
+market = market_selector(md)
 
 date = st.sidebar.date_input('Select starting bt date',
                      value=(datetime.date.today() - datetime.timedelta(days=1)))
@@ -228,10 +241,10 @@ depth = int(diff.total_seconds())
 # market_data2 = get_data(market, 5, depth)
 # # market_data2
 interval = st.sidebar.selectbox('Candle size', ([1,2,3,4,5,6,10,12,15,20,30,45,60,90,120]))
-marketdata = get_data2(market,interval, depth)
+marketdata = get_data2(market,interval, depth,md)
 # st.bar_chart(marketdata)
 
 # st.altair_chart(marketdata)
 
-csv = md().save_market_data_to_csv(marketdata, market)
+csv = md.save_market_data_to_csv(marketdata, market)
 st.write(csv)

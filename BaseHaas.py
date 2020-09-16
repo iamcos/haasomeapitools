@@ -32,7 +32,7 @@ from haasomeapi.enums.EnumPriceSource import EnumPriceSource
 from haasomeapi.HaasomeClient import HaasomeClient
 from numpy import arange
 import numpy as np
-from PyInquirer import (Token, Separator,ValidationError, Validator, print_json, prompt ,style_from_dict)
+# from PyInquirer import (Token, Separator,ValidationError, Validator, print_json, prompt ,style_from_dict)
 from ratelimit import limits, sleep_and_retry
 # from autobt import InteractiveBT
 import configserver
@@ -152,6 +152,9 @@ class Haas():
     def client(self):
         ip, secret = self.read_config()
         haasomeClient = HaasomeClient(ip, secret)
+        return haasomeClient
+    def client_variable_login_data(self,ip,secret):
+        haasomeClient = HaasomeClient(ip,secret)
         return haasomeClient
 
     def test_config(self):
@@ -1703,4 +1706,3 @@ def scalper_test_menu():
 if __name__ == "__main__":
     # main()
     test_menu()
-    
