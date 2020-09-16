@@ -5,11 +5,11 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 import plotly.express as px
 import plotly.graph_objs as go
-from MarketDataClass import MarketData
+from BaseHaas import MarketData
 from datetime import datetime as dt
 from threading import Timer
 from sqlalchemy import create_engine
-from MarketDataClass import MarketData
+from BaseHaas import MarketData
 from botsellector import BotSellector
 import btalib
 import dash_bootstrap_components as dbc

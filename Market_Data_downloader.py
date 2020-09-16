@@ -2,9 +2,10 @@ import datetime
 from math import pi
 import streamlit as st
 import pandas as pd
-import numpy as np
+import numpy as np 
 import plotly.figure_factory as ff
-from MarketDataClass import MarketData as md
+from BaseHaas import MarketData as md
+from BaseHaas import Haas
 import dtale
 import os
 from bokeh.plotting import figure, ColumnDataSource
@@ -34,18 +35,17 @@ def market_selector():
     primarycurrency = st.sidebar.selectbox(
         'Primary coin', (md().primarycoin_dropdown(pricesource)))
     secondarycurrency = st.sidebar.selectbox('Secondary coin',(md().secondary_coin_dropdown(pricesource,primarycurrency)))
-
     market_object = md().return_priceMarket_object(pricesource,primarycurrency,secondarycurrency)
     st.title(
         f'Haasonline market data dashboard. {pricesource},{primarycurrency},{secondarycurrency}')
-    # market_object.reset_index(inplace=True)
     return market_object
 
 
 
-@st.cache
-def get_data(marketobject, start, ticks):
-    data = md().get_market_data(marketobject, 5, ticks)
+
+def get_data(marketobject, interval, ticks):
+    print('interval', interval,'ti cks', ticks)
+    data = md().get_market_data(marketobject, interval, ticks)
     data['Open'] = data['open']
     data['Date'] = data['date']
     data['Close'] = data['close']
@@ -56,9 +56,10 @@ def get_data(marketobject, start, ticks):
     data.reset_index(inplace=True)
     return data
 
-@st.cache
-def get_data2(marketobject, start, ticks):
-    data = md().get_market_data(marketobject, 5, ticks)
+
+def get_data2(marketobject, interval, ticks):
+    print('interval', interval,'ti cks', ticks)
+    data = md().get_market_data(marketobject, interval, ticks)
 
     data.reset_index(inplace=True)
     # data.set_index('Date')
@@ -69,7 +70,7 @@ def get_data2(marketobject, start, ticks):
 # @st.cache
 def cleanString(string):
     return string.translate({ord('$'): None})
-
+ 
 
 def candlestick_plot(df, name):
     # Select the datetime format for the x axis depending on the timeframe
@@ -215,19 +216,19 @@ market = market_selector()
 
 date = st.sidebar.date_input('Select starting bt date',
                      value=(datetime.date.today() - datetime.timedelta(days=1)))
-time = st.sidebar.time_input('Select starting time')
+time = st.sidebar.time_input('Select starting time')    
 
 dto = datetime.datetime.combine(date,time)
 bd = BotDB()
-depth = bd.calculate_ticks(dto)
+today = datetime.datetime.today()
+diff = today-dto
+
+depth = int(diff.total_seconds())
 # # st.write(market)
 # market_data2 = get_data(market, 5, depth)
 # # market_data2
-marketdata = get_data2(market, 5, depth)
-
-fig = candlestick_plot(
-    marketdata, f"{EnumPriceSource(market.priceSource).name},{market.primaryCurrency}/{market.secondaryCurrency}")
-st.bokeh_chart(fig, )
+interval = st.sidebar.selectbox('Candle size', ([1,2,3,4,5,6,10,12,15,20,30,45,60,90,120]))
+marketdata = get_data2(market,interval, depth)
 # st.bar_chart(marketdata)
 
 # st.altair_chart(marketdata)

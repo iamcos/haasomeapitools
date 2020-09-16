@@ -22,7 +22,7 @@ from haasomeapi.apis.AccountDataApi import AccountDataApi as acc
 # import jsonpickle
 import pandas as pd
 import requests
-from examples import custom_style_2
+
 from haasomeapi.enums.EnumCustomBotType import EnumCustomBotType
 from haasomeapi.enums.EnumErrorCode import EnumErrorCode
 from haasomeapi.enums.EnumIndicator import EnumIndicator
@@ -184,7 +184,7 @@ class Haas():
                 'default': False
             },
             ]
-        setup = prompt(apiSetup,style =custom_style_2)
+        setup = prompt(apiSetup)
 
 
         if not setup['apiConfigured']:
@@ -1028,6 +1028,8 @@ class MarketData(Haas):
                                              == primarycoin][df["secondarycurrency"] == secondarycoin]
         # print('Market obj',obj.obj[0]__dict__)
         # print('obj1', obj[0][3])
+        # print('obj', obj.obj.values[0].__dict__)
+        print(type(obj.obj.values[0]))
         return obj.obj.values[0]
     def db_table(self):
 
@@ -1040,7 +1042,7 @@ class MarketData(Haas):
     def get_market_data(self, priceMarketObject, interval, depth):
             marketdata = self.c.marketDataApi.get_history_from_market(
             priceMarketObject, interval, depth)
-            print(marketdata.errorCode, marketdata.errorMessage)
+            print('get_market_data',marketdata.errorCode, marketdata.errorMessage)
             df = self.to_df_for_ta(marketdata.result)
             return df
 
