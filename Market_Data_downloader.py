@@ -2,10 +2,10 @@ import datetime
 from math import pi
 import streamlit as st
 import pandas as pd
-import numpy as np 
+import numpy as np
 import plotly.figure_factory as ff
 from BaseHaas import MarketData as md
-from BaseHaas import Haas
+from BaseHaas import Haas, BotDB
 from haasomeapi.HaasomeClient import HaasomeClient
 import dtale
 import os
@@ -14,237 +14,129 @@ from bokeh.models.widgets import Dropdown
 from bokeh.io import curdoc
 from bokeh.layouts import column
 from bokeh.plotting import figure, output_file, show
-
+from ta import add_all_ta_features
+from ta.utils import dropna
+import plotly.express as px
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
+import streamlit as st
+from datetime import date
+import datetime
+import io
 from bokeh.models import BooleanFilter, CDSView, Select, Range1d, HoverTool
 from bokeh.palettes import Category20
 from bokeh.models.formatters import NumeralTickFormatter
-from botdb import BotDB
+
 from bokeh.models import CustomJS, ColumnDataSource, HoverTool, NumeralTickFormatter
 from haasomeapi.enums.EnumPriceSource import EnumPriceSource
-
 from ratelimit import limits, sleep_and_retry
-# data_load_state = st.text('Loading data...')
+import configparser as cp
+class Streamlit_interface:
+    def __init__(self):
+        self.md = md
+ 
+        self.market = None
+        self.depth = int(0)
+        self.interval = int(0)
 
-def get_creds(md):
-        ip = st.sidebar.text_input('Server ip: ')
+    def get_creds(self):
+        adr = st.sidebar.text_input('Server ip: ')
         port = st.sidebar.text_input('Server port:')
         secret = st.sidebar.text_input('API key/secret: ')
 
-        ip = str('http://'+ip+':'+port)
-        md.c = HaasomeClient(ip,secret)
-        return md()
-
-md = get_creds(md)
-
-def market_selector(md):
-    
-
-    
-    markets = md.get_all_markets()
-    pricesource = st.sidebar.selectbox(
-        'Select Exchange',
-        (markets.pricesource.unique()), index=2)
-
-    primarycurrency = st.sidebar.selectbox(
-        'Primary coin', (md.primarycoin_dropdown(pricesource)))
-    secondarycurrency = st.sidebar.selectbox('Secondary coin',(md.secondary_coin_dropdown(pricesource,primarycurrency)))
-    market_object = md.return_priceMarket_object(pricesource,primarycurrency,secondarycurrency)
-    st.title(
-        f'Haasonline market data dashboard. {pricesource},{primarycurrency},{secondarycurrency}')
-    return market_object
+        ip = str('http://'+adr+':'+port)
+        client = HaasomeClient(ip, secret)
+        self.client = client
+        md = self.md.c = client
+        
 
 
+    def market_selector(self):
+        markets = self.md.get_all_markets(self.md())
+        pricesource = st.sidebar.selectbox(
+            'Select Exchange',
+            (markets.pricesource.unique()), index=2)
 
+        primarycurrency = st.sidebar.selectbox(
+            'Primary coin', (self.md.primarycoin_dropdown(self.md(),pricesource)))
+        secondarycurrency = st.sidebar.selectbox(
+            'Secondary coin', (self.md.secondary_coin_dropdown(self.md(),pricesource, primarycurrency)))
+        market_object = self.md.return_priceMarket_object(self.md(),
+            pricesource, primarycurrency, secondarycurrency)
+        st.title(
+            f'Haasonline market data dashboard. {pricesource},{primarycurrency},{secondarycurrency}')
+        self.market = market_object
+        return market_object
+    # @st.cache
+    def fetch_data(self):
+        get = st.sidebar.button('Get Data')
+        if get:
+            data = self.get_data()
+            get = False
+            return data
 
-def get_data(marketobject, interval, ticks,md):
-    print('interval', interval,'ti cks', ticks)
-    data = md.get_market_data(marketobject, interval, ticks)
-    data['Open'] = data['open']
-    data['Date'] = data['date']
-    data['Close'] = data['close']
-    data['High'] = data['high']
-    data['Low'] = data['low']
+    def get_data(self):
+            data = self.md.get_market_data(self.md(),self.market, self.interval, self.depth)
+            return data
+        
+  
 
-    data.drop(['open', 'date', 'close', 'high', 'low'], axis=1, inplace=True)
-    data.reset_index(inplace=True)
-    return data
+    def setup_bt(self):
+        date = st.sidebar.date_input('Select starting bt date',
+                                    value=(datetime.date.today() - datetime.timedelta(days=1)))
+        time = st.sidebar.time_input('Select starting time')
+        dto = datetime.datetime.combine(date, time)
+        today = datetime.datetime.today()
+        diff = today-dto
+        interval = st.sidebar.selectbox(
+            'Candle size', ([1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 45, 60, 90, 120]))
+        depth = int(diff.total_seconds()/60
+        /int(interval))
+        print('date ', date, 'time ', time, 'diff ',
+            diff, 'depth ', depth, 'interval', interval)
+        self.depth = depth
+        self.interval = interval
 
+    def plot_market_data(self,marketdata):
 
-def get_data2(marketobject, interval, ticks,md):
-    # print('interval', interval,'ti cks', ticks)
-    data = md.get_market_data(marketobject, interval, ticks)
+        fig = go.Figure(data=[go.Candlestick(x=marketdata['Date'],
+            open=marketdata['Open'],
+            high=marketdata['High'],
+            low=marketdata['Low'],
+            close=marketdata['Close'],
+            name=f"{self.market.primaryCurrency}/{self.market.secondaryCurrency}"
+            )])
+        fig.update_layout(
+            title=f"{self.market.primaryCurrency}/{self.market.secondaryCurrency}",
+            xaxis_title="Date",
+            yaxis_title=f"Price ({self.market.secondaryCurrency})",
+            font=dict(
+                family="Courier New, monospace",
+                size=12,
+                color="black"
+            )
+        )
+        st.plotly_chart(fig,  use_container_width=False)
 
-    data.reset_index(inplace=True)
-    # data.set_index('Date')
+    def save_to_csv(self,marketdata):
 
-    return data
+        csv = self.md.save_market_data_to_csv(self.md(),marketdata,
+         self.market)
+        st.write(csv)
 
+def main(streamlit):
+        streamlit.get_creds()
+        streamlit.market_selector()
+        streamlit.setup_bt()
+        # data = streamlit.fetch_data()
+       
+        data = streamlit.get_data()
 
-# @st.cache
-def cleanString(stringmd):
-    return string.translate({ord('$'): None})
- 
-
-def candlestick_plot(df, namemd):
-    # Select the datetime format for the x axis depending on the timeframe
-    xaxis_dt_format = '%d %b %Y'
-
-    # if df['Date'][0].hour > 0:
-    #     xaxis_dt_format = '%d %b %Y, %H:%M:%S'
-
-    #more on https://docs.bokeh.org/en/latest/docs/reference/themes.html
-    curdoc().theme = 'dark_minimal'
-    fig = figure(sizing_mode='scale_both',
-                 tools="xpan,xwheel_zoom,reset,save",
-                 active_drag='xpan',
-                 active_scroll='xwheel_zoom',
-                 x_axis_type='linear',
-                #  height = 500,
-                # ,
-                 #x_range=Range1d(df.index[0], df.index[-1]),
-                 title=name
-                 )
-
-    fig.background_fill_color = 'black'
-    fig.xgrid.grid_line_color = None
-    fig.ygrid.grid_line_alpha = 0.5
-    fig.xaxis.major_label_text_font_size = "16pt"
-    fig.yaxis.major_label_text_font_size = "16pt"
-    fig.title.text_font_size = "18pt"
-    fig.yaxis[0].formatter = NumeralTickFormatter(format="$5.2f")
-    inc = df.Close > df.Open
-    dec = inc
-
-    # Colour scheme for increasing and descending candles
-    INCREASING_COLOR = '#009E73'
-    DECREASING_COLOR = '#9E002A'
-
-    width = 0.5
-    inc_source = ColumnDataSource(data=dict(
-        x1=df.index[inc],
-        top1=df.Open[inc],
-        bottom1=df.Close[inc],
-        high1=df.High[inc],
-        low1=df.Low[inc],
-        Date1=df.Date[inc]
-    ))
-
-    dec_source = ColumnDataSource(data=dict(
-        x2=df.index[dec],
-        top2=df.Open[dec],
-        bottom2=df.Close[dec],
-        high2=df.High[dec],
-        low2=df.Low[dec],
-        Date2=df.Date[dec]
-    ))
-    # Plot candles
-    # High and low
-    fig.segment(x0='x1', y0='high1', x1='x1', y1='low1',
-                source=inc_source, color=INCREASING_COLOR)
-    fig.segment(x0='x2', y0='high2', x1='x2', y1='low2',
-                source=dec_source, color=DECREASING_COLOR)
-
-    # Open and close
-    r1 = fig.vbar(x='x1', width=width, top='top1', bottom='bottom1', source=inc_source,
-                    fill_color=INCREASING_COLOR, line_color=INCREASING_COLOR)
-    r2 = fig.vbar(x='x2', width=width, top='top2', bottom='bottom2', source=dec_source,
-                    fill_color=DECREASING_COLOR, line_color=DECREASING_COLOR)
-
-    # Add on extra lines (e.g. moving averages) here
-    # fig.line(df.index, <your data>)
-
-    # Add on a vertical line to indicate a trading signal here
-    #vlineIncreasing = Span(location=235, dimension='width',
-    #              line_color="red", line_width=2)
-    #vlineDecreasing = Span(location=150, dimension='width',
-    #              line_color="green", line_width=2)
-    #fig.renderers.extend([vlineIncreasing,vlineDecreasing])
-
-    # Add date labels to x axis
-    fig.xaxis.major_label_overrides = {
-        i: date.strftime(xaxis_dt_format) for i, date in enumerate(pd.to_datetime(df["Date"]))
-    }
-
-    # Set up the hover tooltip to display some useful data
-    fig.add_tools(HoverTool(
-        renderers=[r1],
-        tooltips=[
-            ("Open", "$@top1"),
-            ("High", "$@high1"),
-            ("Low", "$@low1"),
-            ("Close", "$@bottom1"),
-            ("Date", "@Date1{" + xaxis_dt_format + "}"),
-        ],
-        formatters={
-            'Date1': 'datetime',
-        }))
-
-    fig.add_tools(HoverTool(
-        renderers=[r2],
-        tooltips=[
-            ("Open", "$@top2"),
-            ("High", "$@high2"),
-            ("Low", "$@low2"),
-            ("Close", "$@bottom2"),
-            ("Date", "@Date2{" + xaxis_dt_format + "}")
-        ],
-        formatters={
-            'Date2': 'datetime'
-        }))
-
-    # JavaScript callback function to automatically zoom the Y axis to
-    # view the data properly
-    source = ColumnDataSource(
-        {'Index': df.index, 'High': df.High, 'Low': df.Low})
-    callback = CustomJS(args={'y_range': fig.y_range, 'source': source}, code='''
-        clearTimeout(window._autoscale_timeout);
-        var Index = source.data.Index,
-            Low = source.data.Low,
-            High = source.data.High,
-            start = cb_obj.start,
-            end = cb_obj.end,
-            min = Infinity,
-            max = -Infinity;
-        for (var i=0; i < Index.length; ++i) {
-            if (start <= Index[i] && Index[i] <= end) {
-                max = Math.max(High[i], max);
-                min = Math.min(Low[i], min);
-            }
-        }
-        var pad = (max - min) * .05;
-        window._autoscale_timeout = setTimeout(function() {
-            y_range.start = min - pad;
-            y_range.end = max + pad;
-        });
-    ''')
-
-    # Finalise the figure
-    # fig.width_policy = "auto"
-
-    fig.x_range.js_on_change('start', callback)
-    return fig
-
-
-market = market_selector(md)
-
-date = st.sidebar.date_input('Select starting bt date',
-                     value=(datetime.date.today() - datetime.timedelta(days=1)))
-time = st.sidebar.time_input('Select starting time')    
-
-dto = datetime.datetime.combine(date,time)
-bd = BotDB()
-today = datetime.datetime.today()
-diff = today-dto
-
-depth = int(diff.total_seconds())
-# # st.write(market)
-# market_data2 = get_data(market, 5, depth)
-# # market_data2
-interval = st.sidebar.selectbox('Candle size', ([1,2,3,4,5,6,10,12,15,20,30,45,60,90,120]))
-marketdata = get_data2(market,interval, depth,md)
-# st.bar_chart(marketdata)
-
-# st.altair_chart(marketdata)
-
-csv = md.save_market_data_to_csv(marketdata, market)
-st.write(csv)
+        # streamlit.save_to_csv(data)
+            
+        
+        streamlit.plot_market_data(data)
+        
+if __name__ == '__main__':
+    s = Streamlit_interface()
+    main(s)

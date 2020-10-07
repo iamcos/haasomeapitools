@@ -17,12 +17,11 @@ from functools import lru_cache
 from pathlib import Path
 from random import random
 from time import sleep
-# from prompt_toolkit.validation import Validator, ValidationError
+from prompt_toolkit.validation import Validator, ValidationError
 from haasomeapi.apis.AccountDataApi import AccountDataApi as acc
 # import jsonpickle
 import pandas as pd
 import requests
-
 from haasomeapi.enums.EnumCustomBotType import EnumCustomBotType
 from haasomeapi.enums.EnumErrorCode import EnumErrorCode
 from haasomeapi.enums.EnumIndicator import EnumIndicator
@@ -50,6 +49,11 @@ class Haas():
 
     def __init__(self):
         self.c = self.client()
+
+    def client(self):
+        ip, secret = self.read_config()
+        haasomeClient = HaasomeClient(ip, secret)
+        return haasomeClient
 
     def read_config(self):
         c = cp.ConfigParser()
@@ -149,10 +153,6 @@ class Haas():
 
         return int(delta_minutes)
 
-    def client(self):
-        ip, secret = self.read_config()
-        haasomeClient = HaasomeClient(ip, secret)
-        return haasomeClient
     def client_variable_login_data(self,ip,secret):
         haasomeClient = HaasomeClient(ip,secret)
         return haasomeClient
@@ -471,6 +471,28 @@ class Main_Menu(Haas):
 
      
                     
+    def finetune(self,bot):
+        config = self.bot_config(bot)
+        config.drop(['interval','signalconsensus','resetmiddle','allowmidsells','matype','fcc','trades','roi'],axis='columns',inplace=True)
+        columns = config.columns
+        tuning_configs = pd.DataFrame(columns = columns)
+        for i in config.columns:
+            v = config.i.values
+            if int(v):
+                if v>=5:
+                    for n in range(v,v+3,1):
+                        pass
+                    for n in range (v-3,v,1):
+                        pass
+                elif v<=2:
+                    pass
+                elif v<5:
+                    for n in range(v,v+3):
+                        pass
+                    for n in range(v-2,v,1):
+                        pass
+                
+
 
    
     def bt(self):
@@ -526,7 +548,7 @@ class Main_Menu(Haas):
 
     def file_selector(self):
         files = BotDB().get_csv_files()
-        print(files[0:5])
+        # print(files[0:5])
         question ={
                 'type': 'list',
                 'name': 'file',
@@ -540,7 +562,6 @@ class Main_Menu(Haas):
    
 
 class MadHatterBot(Bot):
-
 
     def create_mh(self, input_bot, name):
         new_mad_hatter_bot = self.c.customBotApi.new_mad_hatter_bot_custom_bot(
@@ -579,7 +600,8 @@ class MadHatterBot(Bot):
         d = self.bruteforce_rsi_corridor(bot)
 
     def bot_config(self, bot):
-        botdict = {"roi": int(bot.roi),
+        botdict = {
+            "roi": int(bot.roi),
             "interval": int(bot.interval),
             "signalconsensus": bool(bot.useTwoSignals),
             "resetmiddle": bool(bot.bBands["ResetMid"]),
@@ -595,7 +617,8 @@ class MadHatterBot(Bot):
             "macdfast": str(bot.macd["MacdFast"]),
             "macdslow": str(bot.macd["MacdSlow"]),
             "macdsign": str(bot.macd["MacdSign"]),
-            "trades": int(len(bot.completedOrders))}
+            "trades": int(len(bot.completedOrders))
+        }
             # "pricesource": EnumPriceSource(bot.priceMarket.priceSource).name,
             # "primarycoin": bot.priceMarket.primaryCurrency,
             # "secondarycoin": bot.priceMarket.secondaryCurrency,
@@ -990,7 +1013,7 @@ class MarketData(Haas):
             }
             for x in market_history
         ]
-        # print(market_data)
+        print(market_data)
         df = pd.DataFrame(market_data)
 
         try:
@@ -998,7 +1021,7 @@ class MarketData(Haas):
 
         except:
             print('Whops')
-  # print(df.index)
+            # print(df)
         return df
 
     def get_all_markets(self):
@@ -1032,7 +1055,7 @@ class MarketData(Haas):
         # print('Market obj',obj.obj[0]__dict__)
         # print('obj1', obj[0][3])
         # print('obj', obj.obj.values[0].__dict__)
-        print(type(obj.obj.values[0]))
+        # print(type(obj.obj.values[0]))
         return obj.obj.values[0]
     def db_table(self):
 
@@ -1040,22 +1063,45 @@ class MarketData(Haas):
         market_data_cols = ['dt', 'open', 'close', 'volume', 'buy', 'sell']
         indicator_cols = ['dt', 'val1','val2','val3']
 
-    @sleep_and_retry
-    @limits(calls=1, period=3)
+    # @sleep_and_retry
+    # @limits(calls=5, period=15)
     def get_market_data(self, priceMarketObject, interval, depth):
             marketdata = self.c.marketDataApi.get_history_from_market(
             priceMarketObject, interval, depth)
-            print('get_market_data',marketdata.errorCode, marketdata.errorMessage)
-            df = self.to_df_for_ta(marketdata.result)
-            return df
+            # print(type(marketdata.result))
+            print('get_market_data','errorcode',marketdata.errorCode,'errormessage', marketdata.errorMessage)
+            if marketdata.errorCode == EnumErrorCode.SUCCESS:
+                
+                if type(marketdata.result) == list:
+                    if len(marketdata.result) > 0:
+                        # print('len',len(marketdata.result))
+                        df = self.to_df_for_ta(marketdata.result)
+                        return df
+                    else:
+                        time.sleep(5)
+                        return self.get_market_data(priceMarketObject,interval,depth)
+                else:
+                    time.sleep(10)
+                    return self.get_market_data(priceMarketObject,interval,depth)
+            else:
+                time.sleep(10)
+                return self.get_market_data(priceMarketObject,interval,depth)
+            
+            # elif marketdata.errorCode == EnumErrorCode.PRICE_MARKET_IS_SYNCING:
+            #     for i in range(10):
+            #         time.sleep(5)
+            #         self.get_market_data(priceMarketObject,interval,depth)
+                   
+           
 
     def save_market_data_to_csv(self, marketData, marketobj):
         filename = f'{EnumPriceSource(marketobj.priceSource).name}-{marketobj.primaryCurrency}-{marketobj.secondaryCurrency}-{len(marketData)}.csv'
-
-        marketData.to_csv(f'./market_data/{filename}')
-        print(f'{EnumPriceSource(marketobj.priceSource).name} | {marketobj.primaryCurrency} | {marketobj.secondaryCurrency} sucessfuly saved to csv')
-        return f"sucessfully saved {filename} to market_data folder, with {len(marketData)} ticks included"
-
+        if len(marketData)>0:
+            marketData.to_csv(f'./market_data/{filename}')
+            print(f'{EnumPriceSource(marketobj.priceSource).name} | {marketobj.primaryCurrency} | {marketobj.secondaryCurrency} sucessfuly saved to csv')
+            return f"sucessfully saved {filename} to market_data folder, with {len(marketData)} ticks included"
+        else:
+            return f"Market Data is empty. {filename} has not been saved."
     def read_csv(self,file,nrows=None):
         data = BotDB().read_csv(file,nrows=nrows)
         def uppercase(x): return str(x).capitalize()
@@ -1646,17 +1692,30 @@ class BotDB:
 
     def iterate_csv(self, configs, bot, depth):
         best_roi = 0
-        
+        configs.roi[0:-1] = 0
+        cols = ['interval', 'signalconsensus', 'fcc', 'resetmiddle',
+             'allowmidsells', 'matype', 'rsil', 'rsib', 'rsis', 'bbl', 'devup',
+             'devdn', 'macdfast', 'macdslow', 'macdsign', 'trades', 'roi']
+        for c in configs.columns:
+            if c not in cols:
+                configs.drop(c,axis=1,inplace=True)
         markets = self.c.marketDataApi.get_price_markets(bot.priceMarket.priceSource).result
         for market in markets:
             if market.primaryCurrency == bot.priceMarket.primaryCurrency:
                 if market.secondaryCurrency == bot.priceMarket.secondaryCurrency:
                     if bot.currentTradeAmount< market.minimumTradeAmount:
                         bot.currentTradeAmount = market.minimumTradeAmount
-        with alive_bar(len(configs.index), title = f"{bot.name} backtesting in progress") as bar:
+        with alive_bar(len(configs.index), title = f"{bot.name} backtesting. ") as bar:
            
             for i in configs.index:
-                os.system('clear')
+                try:
+                    print('Current Backtest ROI: ', bt.roi,'%','best ROI:', best_roi,'%')
+                    print('\nTop 5 configs so far:\n')
+                    print(configs.sort_values(by='roi', ascending=False)[0:5])
+                    
+                except:
+                    pass            
+                
                 config = configs.iloc[i]
                 self.setup_bot_from_csv(bot, config)
                 bt = self.c.customBotApi.backtest_custom_bot_on_market(
@@ -1670,9 +1729,10 @@ class BotDB:
                     best_roi = bt.roi
                 configs['roi'][i] = bt.roi
                 
-                print('\n\n     Current Backtest ROI: ', bt.roi,'%','best ROI:', best_roi,'%')
+                
                 
                 bar()
+                os.system('clear')
 
                 
             return configs
