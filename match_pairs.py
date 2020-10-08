@@ -3,6 +3,7 @@ import pandas as pd
 from BaseHaas import MarketData
 from functools import lru_cache
 from BaseHaas import Main_Menu
+from elasticsearch import Elasticsearch
 @lru_cache()
 def return_all_pairs():
         markets = MarketData().get_all_markets()
@@ -20,4 +21,8 @@ def test():
 if __name__ == "__main__":
         # return_all_pairs()
 #     return_coin_pair()
-        test()
+        # test()
+        pass
+
+es = Elasticsearch('127.0.0.1:9200').data_frame
+print(es)

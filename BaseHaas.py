@@ -40,7 +40,8 @@ import interval as iiv
 from botsellector import BotSellector
 import inquirer
 from alive_progress import alive_bar
-
+import logging
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class Haas():
 
@@ -54,6 +55,7 @@ class Haas():
     def client(self):
         ip, secret = self.read_config()
         haasomeClient = HaasomeClient(ip, secret)
+        haasomeClient.test_credentials().errorCode
         return haasomeClient
 
     def read_config(self):
@@ -281,44 +283,123 @@ class Main_Menu(Haas):
 
     def dev_features(self):
         question = [inquirer.List('resp', 'Select Something', [
-                                  'Create Scalper bots from Tradingview CSV file', 'bla'])]
+                                  'Create Scalper bots from Tradingview CSV file', 'Create Mad-Hatter bots from Tradingview CSV file','Create Ping-Pong bots from Tradingview CSV file', 'Create Order Bots bots from Tradingview CSV file'])]
         answer = inquirer.prompt(question)
         if answer['resp'] == 'Create Scalper bots from Tradingview CSV file':
-            markets_df = self.return_marketobjects_from_tradingview_csv_file()
-            
-
-            accounts = self.c.accountDataApi.get_all_account_details().result
-            accounts_guid = list(accounts.keys())
-            print('marketobjects', markets_df[:3], len(markets_df))
-            print('accounts_guid', accounts_guid)
-            accounts_with_details = []
-            for a in accounts_guid:
-                acc = self.c.accountDataApi.get_account_details(a).result
-                accounts_with_details.append(acc)
-            print('accounts_with_details', accounts_with_details)
-            # print(markets_df.marketobj.values)
-            bots = []
-
-            for m in markets_df.marketobj.values:
-
+            new_bots = self.tw_to_bots(3)
+        elif answer['resp'] == 'Create Mad-Hatter bots from Tradingview CSV file':
+            new_bots = self.tw_to_bots(15)
+        elif answer['resp'] == 'Create Ping-Pong bots from Tradingview CSV file':
+            new_bots = self.tw_to_bots(2)
+        elif answer['resp'] == 'Create Order Bots bots from Tradingview CSV file':
+            new_bots = self.tw_to_bots(4)
+    
+    
+    def tw_to_bots(self,bottype):
+    
+        markets_df = self.return_marketobjects_from_tradingview_csv_file()
+        accounts_with_details = self.tw_to_haas_market_translator()
+        botlist = self.c.customBotApi.get_all_custom_bots().result
+        for m in markets_df.marketobj.values:
+            for a in accounts_with_details:
+                if m.priceSource == a.connectedPriceSource:
                     try:
-                        bot = self.create_new_bot(3, m, accounts_with_details[0])
-                        bots.append(bot)
+                        bot = self.create_bots_from_tradingview_screener(bottype, m, a)
+                        
                         print(
                             f'{len(bot)} has been created for {EnumPriceSource[m.priceSource].name}')
-                    except:
-                        pass
-            print(bots)
+                    except Exception as e:
+                        print(e)
+        botlist2 = self.c.customBotApi.get_all_custom_bots().result
+        newbots = []
+        for bot in botlist2:
+            if bot not in botlist:
+                self.setup_bot(bot,bottype,m)
+                newbots.append(bot)
+        sb = ScalperBotClass()
 
-    def create_new_bot(self, EnumBot, market_object, account):
-        created_bots = []
-        # print(market_object.__dict__)
+        sb.bot = newbots
+        sb.targetpercentage = [0.5,5,0.2]
+        sb.safetythreshold = [1,5,0.2]
+        sb.backtest()
+        
+
+    def tw_to_haas_market_translator(self):    
+        
+        accounts = self.c.accountDataApi.get_all_account_details().result
+        accounts_guid = list(accounts.keys())
+
+        accounts_with_details = []
+        for a in accounts_guid:
+            acc = self.c.accountDataApi.get_account_details(a).result
+            accounts_with_details.append(acc)
+        return accounts_with_details
+
+
+    def create_bots_from_tradingview_screener(self, EnumBot, market_object, account):
+        
         newbot = self.c.customBotApi.new_custom_bot(
-            account.guid, EnumBot, f'TW {market_object.primaryCurrency}/{market_object.secondaryCurrency}', market_object.primaryCurrency, market_object.secondaryCurrency, market_object.contractName)
-        print(newbot.errorCode)
-        created_bots.append(newbot.result)
-        return created_bots
-
+            account.guid, EnumBot, f'TW {market_object.primaryCurrency}/{market_object.secondaryCurrency}', market_object.primaryCurrency, market_object.secondaryCurrency, market_object.contractName).result
+        return newbot
+    
+    def setup_bot(self,bot,EnumBot,priceMarket):
+            
+            
+            
+            if EnumBot == 15:
+                setup = self.c.customBotApi.setup_mad_hatter_bot(
+                botName=bot.name,
+                botGuid=bot.guid,
+                accountGuid=bot.accountId,
+                primaryCoin=bot.priceMarket.primaryCurrency,
+                secondaryCoin=bot.priceMarket.secondaryCurrency,
+                contractName=bot.priceMarket.contractName,
+                leverage=bot.leverage,
+                templateGuid=bot.customTemplate,
+                position=bot.coinPosition,
+                fee=bot.currentFeePercentage,
+                tradeAmountType=bot.amountType,
+                tradeAmount=1000,
+                useconsensus=bot.useTwoSignals,
+                disableAfterStopLoss=bot.disableAfterStopLoss,
+                interval=bot.interval,
+                includeIncompleteInterval=bot.includeIncompleteInterval,
+                mappedBuySignal=bot.mappedBuySignal,
+                mappedSellSignal=bot.mappedSellSignal).result
+            elif EnumBot == 3:
+                setup = self.c.customBotApi.setup_scalper_bot(
+                botname=bot.name,
+                botguid=bot.guid,
+                accountguid=bot.accountId,
+                primarycoin=bot.priceMarket.primaryCurrency,
+                secondarycoin=bot.priceMarket.secondaryCurrency,
+                contractname=bot.priceMarket.contractName,
+                leverage=bot.leverage,
+                templateguid=bot.customTemplate,
+                position=bot.coinPosition,
+                fee=bot.currentFeePercentage,
+                amountType=bot.amountType,
+                tradeamount=1000,
+                targetpercentage = 10,
+                safetythreshold = 5
+                )
+            elif EnumBot == 4:
+                setup = self.c.customBotApi.setup_order_bot(
+                botname=bot.name,
+                botguid=bot.guid,
+                accountguid=bot.accountId,
+                primarycoin=bot.priceMarket.primaryCurrency,
+                secondaryCoin=bot.priceMarket.secondaryCurrency,
+                ).result
+            elif EnumBot == 2:
+                setup = self.c.customBotApi.setup_ping_pong_bot(
+                botname=bot.name,
+                botguid=bot.guid,
+                accountguid=bot.accountId,
+                primarycoin=bot.priceMarket.primaryCurrency,
+                secondarycoin=bot.priceMarket.secondaryCurrency,
+                ).result
+            
     def return_marketobjects_from_tradingview_csv_file(self):
         tw_df = self.format_tw_csv()
         markets = MarketData().get_all_markets()
@@ -776,7 +857,7 @@ class ScalperBotClass(Bot):
     def setup_scalper_bot(self, bot, targetpercentage, safetythreshold):
 
         do = self.c.customBotApi.setup_scalper_bot(accountguid=bot.accountId, botguid=bot.guid, botname=bot.name, primarycoin=bot.priceMarket.primaryCurrency, secondarycoin=bot.priceMarket.secondaryCurrency, templateguid=bot.customTemplate,
-                                                   contractname=bot.priceMarket.contractName, leverage=bot.leverage, amountType=bot.amountType, tradeamount=bot.currentTradeAmount, position=bot.coinPosition, fee=bot.currentFeePercentage, targetpercentage=targetpercentage, safetythreshold=safetythreshold)
+                                                   contractname=bot.priceMarket.contractName, leverage=bot.leverage, amountType=bot.amountType, tradeamount=1000, position=bot.coinPosition, fee=bot.currentFeePercentage, targetpercentage=targetpercentage, safetythreshold=safetythreshold)
         print('result: ', do.errorCode, do.errorMessage)
         return do.result
 
@@ -805,42 +886,59 @@ class ScalperBotClass(Bot):
         end = inquirer.prompt(end_input)['end']
         step = inquirer.prompt(step_input)['step']
         self.safetythreshold = [start, end, step]
+    
+    def bt_date_to_unix(self):
+            c = Haas().read_cfg()
+            min = c['BT DATE'].get('min')
+            hour = c['BT DATE'].get('hour')
+            day = c['BT DATE'].get('day')
+            month = c['BT DATE'].get('month')
+            year = c['BT DATE'].get('year')
+            btd = datetime.datetime(int(year), int(month), int(day), int(hour), int(min))
+            return btd
 
     def backtest(self):
- 
+        btd = self.bt_date_to_unix()
         if len(self.bot) > 0:
             with alive_bar(len(self.bot)) as bar:
                 for bot in self.bot:
+                    if len(bot.completedOrders)>0:
+                        if bot.completedOrders[-1].unixAddedTime>btd.timestamp():
+                            pass
+                    else:
+                    
+                        results = []
+                        columns = ['roi', 'safetythreshold', 'targetpercentage']
 
-                    results = []
-                    columns = ['roi', 'safetythreshold', 'targetpercentage']
+                        for s in tqdm(np.arange(float(self.safetythreshold[0]), float(self.safetythreshold[1]), float(self.safetythreshold[2]))):
 
-                    for s in tqdm(np.arange(float(self.safetythreshold[0]), float(self.safetythreshold[1]), float(self.safetythreshold[2]))):
+                            for t in tqdm(np.arange(float(self.targetpercentage[0]), float(self.targetpercentage[1]), float(self.targetpercentage[2]))):
 
-                        for t in tqdm(np.arange(float(self.targetpercentage[0]), float(self.targetpercentage[1]), float(self.targetpercentage[2]))):
+                                self.setup_scalper_bot(bot, targetpercentage=round(
+                                    t, 2), safetythreshold=round(s, 2))
 
-                            self.setup_scalper_bot(bot, targetpercentage=round(
-                                t, 2), safetythreshold=round(s, 2))
+                                bt_result = self.c.customBotApi.backtest_custom_bot(
+                                    bot.guid, self.ticks)
+                                bt_result = bt_result.result
+                                try:
+                                    print('ROI: ', bt_result.roi, round(t, 2))
+                                    total_results = {'roi': bt_result.roi, 'targetpercentage': round(
+                                    t, 2), 'safetythreshold': round(s, 2)}
 
-                            bt_result = self.c.customBotApi.backtest_custom_bot(
-                                bot.guid, self.ticks)
-                            bt_result = bt_result.result
-                            print('ROI: ', bt_result.roi, round(t, 2))
-                            total_results = {'roi': bt_result.roi, 'targetpercentage': round(
-                                t, 2), 'safetythreshold': round(s, 2)}
-
-                            # results.append(total_results)
-                            results.append(
-                                [bt_result.roi, round(t, 2), round(s, 2)])
-                    df_res = pd.DataFrame(
-                        results, columns=columns, index=range(len(results)))
-                    df_res.sort_values(by='roi', ascending=False, inplace=True)
-                    df_res.reset_index(inplace=True, drop=True)
-                    print(df_res)
-                    self.setup_scalper_bot(
-                        bot, df_res.safetythreshold.iloc[0], df_res.targetpercentage.iloc[0])
-                    self.c.customBotApi.backtest_custom_bot(
-                        bot.guid, self.ticks)
+                                # results.append(total_results)
+                                    results.append(
+                                        [bt_result.roi, round(t, 2), round(s, 2)])
+                                except:
+                                    pass
+                                df_res = pd.DataFrame(
+                                    results, columns=columns, index=range(len(results)))
+                                df_res.sort_values(by='roi', ascending=False, inplace=True)
+                                df_res.reset_index(inplace=True, drop=True)
+                                # print(df_res)
+                                self.setup_scalper_bot(
+                                    bot, df_res.safetythreshold.iloc[0], df_res.targetpercentage.iloc[0])
+                                self.c.customBotApi.backtest_custom_bot(
+                                    bot.guid, self.ticks)
 
         else:
             self.bot_selector()
@@ -848,7 +946,7 @@ class ScalperBotClass(Bot):
     def scalper_bot_menu(self):
         # choices =
         menu = [inquirer.List('response', message='Please chose an action:', choices=[
-                              'Select bots', 'Set range for safety threshold', 'Set range for target percentage', 'Backtest', 'Main menu'])]
+                              'Select bots', 'Set range for safety threshold', 'Set range for target percentage', 'Backtest','backtest every bot', 'Main menu'])]
 
         while True:
             user_response = inquirer.prompt(menu)['response']
@@ -860,6 +958,12 @@ class ScalperBotClass(Bot):
                 self.set_targetpercentage_range()
             elif user_response == 'Backtest':
                 self.backtest()
+            elif user_response == 'backtest every bot':
+                sb = ScalperBotClass()
+                sb.bot = self.c.customBotApi.get_all_custom_bots().result
+                sb.targetpercentage = [0.5,5,0.2]
+                sb.safetythreshold = [1,2,0.2]
+                sb.backtest()
             elif user_response == 'Main menu':
                 break
 
@@ -1686,7 +1790,7 @@ class BotDB:
             if market.primaryCurrency == bot.priceMarket.primaryCurrency:
                 if market.secondaryCurrency == bot.priceMarket.secondaryCurrency:
                     if bot.currentTradeAmount < market.minimumTradeAmount:
-                        bot.currentTradeAmount = market.minimumTradeAmount
+                        bot.currentTradeAmount = 10000
         with alive_bar(len(configs.index), title=f"{bot.name} backtesting. ") as bar:
 
             for i in configs.index:

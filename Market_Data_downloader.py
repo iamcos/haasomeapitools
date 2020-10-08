@@ -7,7 +7,7 @@ import numpy as np
 from alive_progress import alive_bar
 import plotly.figure_factory as ff
 from BaseHaas import MarketData as md
-from BaseHaas import Haas, BotDB, MadHatterBot
+from BaseHaas import Haas, BotDB, MadHatterBot, HaasDash
 from haasomeapi.HaasomeClient import HaasomeClient
 import dtale
 import os
@@ -56,12 +56,12 @@ class StreamlitHaasTool:
         ip = str('http://'+adr+':'+port)
         client = HaasomeClient(ip, secret)
         self.client = client
-        md = self.md.c = client
+        self.md().c = client
         botdb = self.BotDB.c = client
         self.MadHatterBot.c = client
         self.client = client
      
-        if self.md.c.test_credentials().errorCode == EnumErrorCode.SUCCESS:
+        if self.md().c.test_credentials().errorCode == EnumErrorCode.SUCCESS:
                 d =  st.write('LOGIN SUCCESSFULL')
                 time.sleep(5)
                 d = None
@@ -69,16 +69,18 @@ class StreamlitHaasTool:
 
 
     def market_selector(self):
-        markets = self.md.get_all_markets(self.md())
+        hd = HaasDash()
+        markets = self.md().get_all_markets()
+        
         pricesource = st.sidebar.selectbox(
             'Select Exchange',
             (markets.pricesource.unique()), index=2)
 
         primarycurrency = st.sidebar.selectbox(
-            'Primary coin', (self.md.primarycoin_dropdown(self.md(),pricesource)))
+            'Primary coin', (hd.primarycoin_dropdown(pricesource)))
         secondarycurrency = st.sidebar.selectbox(
-            'Secondary coin', (self.md.secondary_coin_dropdown(self.md(),pricesource, primarycurrency)))
-        market_object = self.md.return_priceMarket_object(self.md(),
+            'Secondary coin', (hd.secondary_coin_dropdown(pricesource, primarycurrency)))
+        market_object = self.md().return_priceMarket_object(
             pricesource, primarycurrency, secondarycurrency)
         st.title(
             f'Haasonline market data dashboard. {pricesource},{primarycurrency},{secondarycurrency}')
@@ -93,7 +95,7 @@ class StreamlitHaasTool:
             return data
 
     def get_data(self):
-            data = self.md.get_market_data(self.md(),self.market, self.interval, self.depth)
+            data = self.md().get_market_data(self.market, self.interval, self.depth)
             return data
         
     def _max_width_(self):
@@ -149,12 +151,12 @@ class StreamlitHaasTool:
 
     def save_to_csv(self,marketdata):
 
-        csv = self.md.save_market_data_to_csv(self.md(),marketdata,
+        csv = self.md().save_market_data_to_csv(marketdata,
          self.market)
         st.write(csv)
 
     def return_bots(self):
-        botlist = self.md.c.customBotApi.get_all_custom_bots()
+        botlist = self.md().c.customBotApi.get_all_custom_bots()
         n = [[f'{x.name}| ROI: {x.roi}'][0] for x in botlist.result] # creates list of names
         # r = [x.roi for x in botlist.result]
         b = [x for x in botlist.result] #creates list of objects
@@ -292,7 +294,7 @@ def market_data_downloader(streamlit):
 
         streamlit.plot_market_data(data)
 
-        # streamlit.save_to_csv(data)
+        streamlit.save_to_csv(data)
             
         
 def main():
@@ -301,5 +303,7 @@ def main():
     bot = b.get_data()
 
 if __name__ == '__main__':
+
     streamlit = StreamlitHaasTool()
-    streamlist_mad_hatter_stuff(streamlit)
+    # streamlist_mad_hatter_stuff(streamlit)
+    market_data_downloader(streamlit)
