@@ -1,6 +1,7 @@
 import base64
 import configparser as cp
 import csv
+
 import datetime
 import gzip
 import json
@@ -41,6 +42,7 @@ from botsellector import BotSellector
 import inquirer
 from alive_progress import alive_bar
 import logging
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class Haas():
