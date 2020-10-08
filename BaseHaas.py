@@ -31,7 +31,7 @@ from haasomeapi.enums.EnumPriceSource import EnumPriceSource
 from haasomeapi.HaasomeClient import HaasomeClient
 from numpy import arange
 import numpy as np
-from PyInquirer import (Token, prompt)
+# from PyInquirer import (Token, prompt)
 from ratelimit import limits, sleep_and_retry
 # from autobt import InteractiveBT
 import configserver
@@ -40,6 +40,7 @@ import interval as iiv
 from botsellector import BotSellector
 import inquirer
 from alive_progress import alive_bar
+
 
 class Haas():
 
@@ -65,97 +66,67 @@ class Haas():
         else:
             try:
                 ip = c['SERVER DATA']['server_address']
-                secret=c['SERVER DATA']['secret']
+                secret = c['SERVER DATA']['secret']
             except Exception as e:
                 print(e)
                 self.test_config()
         finally:
             ip = c['SERVER DATA']['server_address']
-            secret=c['SERVER DATA']['secret']
+            secret = c['SERVER DATA']['secret']
         return ip, secret
 
     def read_cfg(self):
         c = cp.ConfigParser()
         c.read('config.ini')
         return c
+
     def write_date(self):
         c = self.read_cfg()
-        bt_date = [
-            {
-                'type': 'input',
-                'name': 'year',
-                'message': f'Write YEAR:',
-                # 'default' :str(datetime.datetime.today().year)
 
+        choices = [f'Write Year:', f'Write month (current is {str(datetime.datetime.today().month)}): ', f'Write day (today is {str(datetime.datetime.today().day )}: ',
+                   f'Write  hour (now is {str(datetime.datetime.today().hour)}):', f'Write min ( mins now {str(datetime.datetime.today().minute)}): ']
 
-            },
-            {
-                'type': 'input',
-                'name': 'month',
-                'message': f'Write month (current is {str(datetime.datetime.today().month)}): ',
-             
+        date_q = [inquirer.Text('y', message=choices[0]),
+                  inquirer.Text('m', message=choices[1]),
+                  inquirer.Text('d', message=choices[2]),
+                  inquirer.Text('h', message=choices[3]),
+                  inquirer.Text('min', message=choices[4])]
 
-            },
-                                {
-                'type': 'input',
-                'name': 'day',
-                'message': f'Write day (today is {str(datetime.datetime.today().day)}): ',
-            
+        # menu = [inquirer.List('response', message = "Go through each step",choices = choices)]
+        answers = inquirer.prompt(date_q)
 
-
-            },
-            {
-                'type': 'input',
-                'name': 'hour',
-                'message': f'Write  hour (now is {str(datetime.datetime.today().hour)}):',
-
-
-
-            },
-            {
-                'type': 'input',
-                'name': 'min',
-                'message': f'Write min ( mins now {str(datetime.datetime.today().minute)}): ',
-
-            }
-            ]
-        answers = prompt(bt_date)
-
-        c['BT DATE'] = {'year':answers['year'], 'month':answers['month'], 'day':answers['day'],'hour':answers['hour'],'min':answers['min']}
-        with open('config.ini','w') as configfile:
-                c.write(configfile)
-    
-
+        c['BT DATE'] = {'year': answers['y'], 'month': answers['m'],
+                        'day': answers['d'], 'hour': answers['h'], 'min': answers['min']}
+        with open('config.ini', 'w') as configfile:
+            c.write(configfile)
 
     def read_ticks(self):
         c = self.read_cfg()
         try:
             min = c['BT DATE'].get('min')
-            hour=c['BT DATE'].get('hour')
+            hour = c['BT DATE'].get('hour')
             day = c['BT DATE'].get('day')
             month = c['BT DATE'].get('month')
             year = c['BT DATE'].get('year')
-            print('BT date set to: ',year,month,day,hour,min)
-            dt_from = datetime.datetime(int(year),int(month),int(day),int(hour),int(min))
+            print('BT date set to: ', year, month, day, hour, min)
+            dt_from = datetime.datetime(int(year), int(
+                month), int(day), int(hour), int(min))
             delta = datetime.datetime.now() - dt_from
             delta_minutes = delta.total_seconds()/60
         except KeyError:
             date = self.write_date()
             min = c['BT DATE'].get('min')
-            hour=c['BT DATE'].get('hour')
+            hour = c['BT DATE'].get('hour')
             day = c['BT DATE'].get('day')
             month = c['BT DATE'].get('month')
             year = c['BT DATE'].get('year')
-            print('BT date set to: ',year,month,day,hour,min)
-            dt_from = datetime.datetime(int(year),int(month),int(day),int(hour),int(min))
+            print('BT date set to: ', year, month, day, hour, min)
+            dt_from = datetime.datetime(int(year), int(
+                month), int(day), int(hour), int(min))
         delta = datetime.datetime.now() - dt_from
         delta_minutes = delta.total_seconds()/60
 
         return int(delta_minutes)
-
-    def client_variable_login_data(self,ip,secret):
-        haasomeClient = HaasomeClient(ip,secret)
-        return haasomeClient
 
     def test_config(self):
 
@@ -163,134 +134,91 @@ class Haas():
         try:
             c.read('config.ini')
             ip = c['SERVER DATA']['server_address']
-            secret=c['SERVER DATA']['secret']
-            test = self.client(ip,secret)
-            print(test.test_credentials().errorMessage.__dict__,test.test_credentials().errorCode.value)
+            secret = c['SERVER DATA']['secret']
+            test = self.client(ip, secret)
+            print(test.test_credentials().errorMessage.__dict__,
+                  test.test_credentials().errorCode.value)
             if test.test_credentials().errorCode.value == EnumErrorCode.SUCCESS:
                 print('Connected to Haas')
                 return ip, secret
+            else:
+                print(
+                    f'Something isn not right. {test.test_credentials().errorCode}')
 
-
-        except:
-            print('Config file not found.')
+        except Exception as e:
+            print(e)
             self.configure_haas()
-
-
 
     def configure_haas(self):
 
         apiSetup = [
-            {
-                'type': 'confirm',
-                'name': 'apiConfigured',
-                'message': 'Have you configured Haas Online API on the client side?',
-                'default': False
-            },
-            ]
-        setup = prompt(apiSetup)
 
+            inquirer.Confirm(
+                'apiConfigured', 'Have you configured Haas Online API on the client side?')
+
+        ]
+
+        setup = inquirer.prompt(apiSetup)
 
         if not setup['apiConfigured']:
             print(f'Following is a step by step guide to configure Haas Local Api. After doing each step, type Y on keyboard to get to next step. \n')
             config_questions = [
-                {
-                    'type':'confirm',
-                    'name': 'settingsPage',
-                    'message': 'Open HaasOnline Settings page',
-                    'default':False
+                inquirer.Text('settingsPage', 'Open HaasOnline Settings page'),
+
+                inquirer.Text('apiSettingsPage',
+                              'Navigate to Local Api page in Settings'),
+
+                inquirer.Text(
+                    'inputIP', 'Input IP. If this app on the same server type:127.0.0.1, else: server address that you use to access Haas remotely'),
 
 
-                },
-                {
-                    'type':'confirm',
-                    'name': 'apiSettingsPage',
-                    'message': 'Navigate to Local Api page in Settings',
-                    'default':False
-                },
-                {
-                    'type':'confirm',
-                    'name': 'inputIP',
-                    'message': 'Input IP. If this app on the same server type:127.0.0.1, else: server address that you use to access Haas remotely',
-                    'default':False
-                },
-                {
-                    'type':'confirm',
-                    'name': 'inputPort',
-                    'message': 'Input Port Number in the next field. Can be any number, for instance 8095',
-                    'default':False
-                },
-                {
-                    'type':'confirm',
-                    'name': 'inputSecret',
-                    'message': 'Input API key in the next field. If app running on the same server, can be simple.  Else, make it complicated',
-                    'default':False
-                },
-                {
-                    'type':'confirm',
-                    'name': 'saveClicked',
-                    'message': 'Click save at the bottom of the page and wait for Haas to do its thing.',
-                    'default':False
-                },
-                {
-                    'type': 'confirm',
-                    'name': 'passwordSavedAgain',
-                    'message': 'Once Haas done its thing, go back to Settings > Local API page and check that password field is not empty. If empty, enter it again and hit save again',
-                    'default': False
+                inquirer.Text(
+                    'inputPort', 'Input Port Number in the next field. Can be any number, for instance 8095'),
 
-                },
-                {
-                    'type': 'confirm',
-                    'name': 'restarted',
-                    'message': 'Once saved, restart Haas server. If running on windows, check if there is any mentions of Local API server in the console app. App will test the connection itself at a later stage',
-                    'default':  False
-                },
-                {
-                    'type': 'confirm',
-                    'name': 'apiActivated',
-                    'message': 'API should be activated, Now lets input API data into the app. This only needs to be done once.',
-                    'default': False
-                }
 
-                    ]
-            configuredAPI = prompt(config_questions)
+                inquirer.Text(
+                    'inputSecret', 'Input API key in the next field. If app running on the same server, can be simple.  Else, make it complicated'),
+
+
+                inquirer.Text(
+                    'saveClicked', 'Click save at the bottom of the page and wait for Haas to do its thing.'),
+
+                inquirer.Text(
+                    'passwordSavedAgain', 'Once Haas done its thing, go back to Settings > Local API page and check that password field is not empty. If empty, enter it again and hit save again'),
+
+
+                inquirer.Text('restarted', 'Once saved, restart Haas server. If running on windows, check if there is any mentions of Local API server in the console app. App will test the connection itself at a later stage'),
+                inquirer.Text(
+                    'apiActivated', 'API should be activated, Now lets input API data into the app. This only needs to be done once.'),
+
+            ]
+        configuredAPI = inquirer.prompt(config_questions)
 
         server_api_data = [
-                {
-                    'type': 'input',
-                    'name': 'ip',
-                    'message': 'Type Haas Local api IP like so: 127.0.0.1',
-                    'default' :'127.0.0.1'
 
-
-                },
-                {
-                    'type': 'input',
-                    'name': 'port',
-                    'message': 'Type Haas Local api PORT like so: 8095',
-                    'default' :'8095'
-
-
-                },
-                {
-                    'type': 'password',
-                    'name': 'secret',
-                    'message': 'Type Haas Local Key (Secret) like so: 123',
-                    'default' :'123'
-
-
-                }
-                    ]
-        connection_data = prompt(server_api_data)
+            inquirer.Text('ip',
+                          'Type Haas Local api IP like so: 127.0.0.1',
+                          default='127.0.0.1'),
+            inquirer.Text('port',
+                          'Type Haas Local api PORT like so: 8095',
+                          default='8095'),
+            inquirer.password('secret',
+                              'Type Haas Local Key (Secret) like so: 123',
+                              default='123')]
+        connection_data = inquirer.prompt(server_api_data)
         print(connection_data)
         c = cp.ConfigParser()
-        c['SERVER DATA'] = {'server_address':'http://'+connection_data['ip']+':'+connection_data['port'],'secret':connection_data['secret']}
-        with open('config.ini','w') as configfile:
-                c.write(configfile)
+        c['SERVER DATA'] = {'server_address': 'http://'+connection_data['ip'] +
+                            ':'+connection_data['port'], 'secret': connection_data['secret']}
+        with open('config.ini', 'w') as configfile:
+            c.write(configfile)
         return connection_data
+
 
 class Bot(Haas):
     def __init__(self):
         Haas.__init__(self)
+
 
 class Main_Menu(Haas):
     def __init__(self):
@@ -299,9 +227,8 @@ class Main_Menu(Haas):
         self.file = None
         self.configs = None
 
-
     def main_screen(self):
-    
+
         choices = [
             'Find and save good configs: AssistedBT',
             "Bruteforce Scalper Bots (bonus feature)",
@@ -309,22 +236,19 @@ class Main_Menu(Haas):
             'Select and apply config to bot',
             'Change backtesting starting date',
             'Change AssistedBT loop Count',
+            'Development Features',
             'Quit'
-            
+
         ]
         loop_count = 10
-       
+
         # os.system('clear')
-        questions = {
-            'type': 'list',
-    
-            'name': 'resp',
-            'message': 'Select an option using keyboard up and down keys, then hit Return : ',
-            'choices': choices
-        }
+        questions = [
+            inquirer.List('resp', 'Select an option using keyboard up and down keys, then hit Return : ', choices=choices)]
+
         while True:
             try:
-                answers = prompt(questions)
+                answers = inquirer.prompt(questions)
 
                 if answers['resp'] in choices:
                     ind = choices.index(answers['resp'])
@@ -346,23 +270,102 @@ class Main_Menu(Haas):
                     loop_count = input('Type New Loop Count: ')
                     print(f'Auto BT lool count has been set to: {loop_count}')
                 elif ind == 6:
+                    file = self.dev_features()
+                elif ind == 7:
                     break
-
             except KeyError:
                 # os.system('clear')
-                print('\n\n     Mouse is not supported, use keyboard instead.\n\n')
+                # print('\n\n     Mouse is not supported, use keyboard instead.\n\n')
+                pass
         return answers
-    
+
+    def dev_features(self):
+        question = [inquirer.List('resp', 'Select Something', [
+                                  'Create Scalper bots from Tradingview CSV file', 'bla'])]
+        answer = inquirer.prompt(question)
+        if answer['resp'] == 'Create Scalper bots from Tradingview CSV file':
+            markets_df = self.return_marketobjects_from_tradingview_csv_file()
+            
+
+            accounts = self.c.accountDataApi.get_all_account_details().result
+            accounts_guid = list(accounts.keys())
+            print('marketobjects', markets_df[:3], len(markets_df))
+            print('accounts_guid', accounts_guid)
+            accounts_with_details = []
+            for a in accounts_guid:
+                acc = self.c.accountDataApi.get_account_details(a).result
+                accounts_with_details.append(acc)
+            print('accounts_with_details', accounts_with_details)
+            # print(markets_df.marketobj.values)
+            bots = []
+
+            for m in markets_df.marketobj.values:
+
+                    try:
+                        bot = self.create_new_bot(3, m, accounts_with_details[0])
+                        bots.append(bot)
+                        print(
+                            f'{len(bot)} has been created for {EnumPriceSource[m.priceSource].name}')
+                    except:
+                        pass
+            print(bots)
+
+    def create_new_bot(self, EnumBot, market_object, account):
+        created_bots = []
+        # print(market_object.__dict__)
+        newbot = self.c.customBotApi.new_custom_bot(
+            account.guid, EnumBot, f'TW {market_object.primaryCurrency}/{market_object.secondaryCurrency}', market_object.primaryCurrency, market_object.secondaryCurrency, market_object.contractName)
+        print(newbot.errorCode)
+        created_bots.append(newbot.result)
+        return created_bots
+
+    def return_marketobjects_from_tradingview_csv_file(self):
+        tw_df = self.format_tw_csv()
+        markets = MarketData().get_all_markets()
+        '''
+        Merging databases into one that contains data from both
+        '''
+        combined_df = pd.merge(tw_df, markets, how='outer', indicator='Exist')
+        combined_df = combined_df.loc[combined_df['Exist'] == 'both']
+
+        # print(len(combined_df.index)-len(tw_df.index),'from Tradingview csv were not identified')
+        missing = pd.merge(tw_df,combined_df, how='outer', indicator='Missing')
+        missing = missing.loc[missing['Missing'] != 'both']
+        
+        #prints combined lisst of tickers from tw and combined db
+        # print(list(zip(tw_df.sort_values(by='Ticker', ascending=False)['Ticker'].values,combined_df.sort_values(by='Ticker', ascending=False)['Ticker'].values)))
+        # print('tw_df',len(tw_df),'markets',len(markets),'combined_df',len(combined_df),'missing',len(missing))
+        return combined_df
+        
+        
+        
+        
+
+
+    def format_tw_csv(self):
+        tw = pd.read_csv(self.file_selector('./tradingview'))
+        # print(tw.columns)
+        tw2 = pd.DataFrame()
+        tw2['Ticker'] = tw['Ticker']
+        Exchange = tw['Exchange'].values
+        priceSources = []
+        for i in Exchange:
+            priceSources.append(EnumPriceSource[i].value)
+        tw2['pricesource'] = priceSources
+        # print(tw2)
+        return tw2
+        
+
     def apply_configs_menu(self):
-        options = ['Select Bot','Select file with configs','Apply configs','Main Menu']
-        config_questions = {
-            'type': 'list',
-            'name': 'response',
-            'message': 'Select an option: ',
-            'choices': options
-        }
+        options = ['Select Bot', 'Select file with configs',
+                   'Apply configs', 'Main Menu']
+        config_questions = [inquirer.List(
+            'response',
+            'Select an option: ',
+            options)]
+
         while True:
-            response = prompt(config_questions)
+            response = inquirer.prompt(config_questions)
             if response['response'] in options:
                 ind = options.index(response['response'])
             if ind == 0:
@@ -371,45 +374,43 @@ class Main_Menu(Haas):
                 file = pd.read_csv(self.file_selector())
             elif ind == 2:
                 # print(self.configs)
-                
-               
+
                 configs = self.configs.sort_values(by='roi', ascending=False)
                 configs.drop_duplicates()
-                configs.reset_index(inplace=True,drop=True)
+                configs.reset_index(inplace=True, drop=True)
                 while True:
                     print(configs)
-                    print('To apply bot type config number from the left column and hit return.')
+                    print(
+                        'To apply bot type config number from the left column and hit return.')
                     print('To return to the main menu, type q and hit return')
                     resp = input('Config number: ')
-                    try: 
-                        if int(resp) >=0:
-                       
-                            BotDB().setup_bot_from_csv(self.bot,configs.iloc[int(resp)])
+                    try:
+                        if int(resp) >= 0:
+
+                            BotDB().setup_bot_from_csv(
+                                self.bot, configs.iloc[int(resp)])
                             # print(Haas().read_ticks)
-                            BotDB().bt_bot(self.bot,Haas().read_ticks())
+                            BotDB().bt_bot(self.bot, Haas().read_ticks())
                         else:
                             break
                     except ValueError as e:
                         break
 
-
             elif ind == 3:
                 break
 
-
     def auto_bt_menu(self):
         self.num_configs = 200
-        options = ['Select Bot','Select config file','Set Limit','Start Backtesting','Main Menu']
-        question = {
-            'type': 'list',
-            'name': 'autobt',
-            'message': 'Select action: ',
-            'choices': options
-        }
+        options = ['Select Bot', 'Select config file',
+                   'Set Limit', 'Start Backtesting', 'Main Menu']
+        question = [inquirer.List(
+            'autobt',
+            'Select action: ',
+            options)
+        ]
 
-        
         while True:
-            response = prompt(question)
+            response = inquirer.prompt(question)
             if response['autobt'] in options:
                 ind = options.index(response['autobt'])
             if ind == 0:
@@ -417,27 +418,31 @@ class Main_Menu(Haas):
             elif ind == 1:
                 file = pd.read_csv(self.file_selector())
             elif ind == 2:
-                self.num_configs = int(input('Type the number of configs you wish to apply from a given file: '))
+                self.num_configs = int(
+                    input('Type the number of configs you wish to apply from a given file: '))
             elif ind == 3:
-                if self.num_configs>len(self.configs.index):
+                if self.num_configs > len(self.configs.index):
                     self.num_configs == len(self.configs.index)
                 else:
                     pass
-                configs = self.configs.sort_values(by='roi', ascending=False)[0:self.num_configs]
+                configs = self.configs.sort_values(by='roi', ascending=False)[
+                    0:self.num_configs]
                 configs.drop_duplicates()
-                configs.reset_index(inplace=True,drop=True)
+                configs.reset_index(inplace=True, drop=True)
                 print(configs)
-                bt_results = BotDB().iterate_csv(configs,self.bot,depth = Haas().read_ticks())
-                filename = str(bot.name.replace('/','_'))+str("_")+str(datetime.date.today().month)+str('-')+str(datetime.date.today().day)+str("_")+str(len(bt_results))+str('.csv')
+                bt_results = BotDB().iterate_csv(configs, self.bot, depth=Haas().read_ticks())
+                filename = str(bot.name.replace('/', '_'))+str("_")+str(datetime.date.today().month)+str(
+                    '-')+str(datetime.date.today().day)+str("_")+str(len(bt_results))+str('.csv')
                 bt_results.to_csv(filename)
             elif ind == 4:
                 break
 
-    def multiple_bot_auto_bt_menu(self): 
+    def multiple_bot_auto_bt_menu(self):
         self.num_configs = 200
         self.limit = 3
-        menu = [inquirer.List('response',message='Please chose an action:',choices=['Select Bots','Select config file','Set configs limit','Set create limit','Start Backtesting','Main Menu'])]
-        
+        menu = [inquirer.List('response', message='Please chose an action:', choices=[
+                              'Select Bots', 'Select config file', 'Set configs limit', 'Set create limit', 'Start Backtesting', 'Main Menu'])]
+
         while True:
             user_response = inquirer.prompt(menu)['response']
             if user_response == 'Select Bots':
@@ -445,99 +450,104 @@ class Main_Menu(Haas):
             elif user_response == 'Select config file':
                 file = pd.read_csv(self.file_selector())
             elif user_response == 'Set configs limit':
-                try: 
-                    
-                    num_configs = [inquirer.Text('num_configs',message='Type the number of configs you wish to apply from a given file: ')]
-                    self.num_configs = int(inquirer.prompt(num_configs)['num_configs'])
+                try:
+
+                    num_configs = [inquirer.Text(
+                        'num_configs', message='Type the number of configs you wish to apply from a given file: ')]
+                    self.num_configs = int(
+                        inquirer.prompt(num_configs)['num_configs'])
                 except ValueError:
-                    print('Invalid input value for the number of configs to apply from a given file. Please type a digit:')
-                    num_configs = [inquirer.Text('num_configs',message='Type the number of configs you wish to apply from a given file: ')]
-                    self.num_configs = int(inquirer.prompt(num_configs)['num_configs'])
+                    print(
+                        'Invalid input value for the number of configs to apply from a given file. Please type a digit:')
+                    num_configs = [inquirer.Text(
+                        'num_configs', message='Type the number of configs you wish to apply from a given file: ')]
+                    self.num_configs = int(
+                        inquirer.prompt(num_configs)['num_configs'])
 
             elif user_response == 'Set create limit':
-                create_limit = [inquirer.Text('step',message='Type how many top bots to create ')]
+                create_limit = [inquirer.Text(
+                    'step', message='Type how many top bots to create ')]
                 create_limit_response = inquirer.prompt(create_limit)['step']
                 self.limit = int(create_limit_response)
-          
+
                 if int(self.limit) >= 1:
                     pass
                 else:
                     self.limit = 0
-                
+
             elif user_response == 'Start Backtesting':
                 self.bt()
             elif user_response == 'Main Menu':
                 break
 
-     
-                    
-    def finetune(self,bot):
+    def finetune(self, bot):
         config = self.bot_config(bot)
-        config.drop(['interval','signalconsensus','resetmiddle','allowmidsells','matype','fcc','trades','roi'],axis='columns',inplace=True)
+        config.drop(['interval', 'signalconsensus', 'resetmiddle', 'allowmidsells',
+                     'matype', 'fcc', 'trades', 'roi'], axis='columns', inplace=True)
         columns = config.columns
-        tuning_configs = pd.DataFrame(columns = columns)
+        tuning_configs = pd.DataFrame(columns=columns)
         for i in config.columns:
             v = config.i.values
             if int(v):
-                if v>=5:
-                    for n in range(v,v+3,1):
+                if v >= 5:
+                    for n in range(v, v+3, 1):
                         pass
-                    for n in range (v-3,v,1):
+                    for n in range(v-3, v, 1):
                         pass
-                elif v<=2:
+                elif v <= 2:
                     pass
-                elif v<5:
-                    for n in range(v,v+3):
+                elif v < 5:
+                    for n in range(v, v+3):
                         pass
-                    for n in range(v-2,v,1):
+                    for n in range(v-2, v, 1):
                         pass
-                
 
-
-   
     def bt(self):
         for b in self.bot:
-            if self.num_configs>len(self.configs.index):
+            if self.num_configs > len(self.configs.index):
                 self.num_configs == len(self.configs.index)
             else:
                 pass
-        
-            configs = self.configs.sort_values(by='roi', ascending=False)[0:self.num_configs]
+
+            configs = self.configs.sort_values(by='roi', ascending=False)[
+                0:self.num_configs]
             configs.drop_duplicates()
-            configs.reset_index(inplace=True,drop=True)
+            configs.reset_index(inplace=True, drop=True)
             # print(configs)
-            bt_results = BotDB().iterate_csv(configs,b,depth = Haas().read_ticks())
-            filename = str(b.name.replace('/','_'))+str("_")+str(datetime.date.today().month)+str('-')+str(datetime.date.today().day)+str("_")+str(len(bt_results))+str('multi.csv')
+            bt_results = BotDB().iterate_csv(configs, b, depth=Haas().read_ticks())
+            filename = str(b.name.replace('/', '_'))+str("_")+str(datetime.date.today().month)+str(
+                '-')+str(datetime.date.today().day)+str("_")+str(len(bt_results))+str('multi.csv')
             bt_results.sort_values(by='roi', ascending=False, inplace=True)
             bt_results.drop_duplicates()
-            bt_results.reset_index(inplace=True,drop=True)
+            bt_results.reset_index(inplace=True, drop=True)
             bt_results.to_csv(filename)
             if self.limit:
                 for c in range(self.limit):
-                    new_bot = MadHatterBot().c.customBotApi.clone_custom_bot_simple(b.accountId,b.guid,b.name).result
+                    new_bot = MadHatterBot().c.customBotApi.clone_custom_bot_simple(
+                        b.accountId, b.guid, b.name).result
                     # print(new_bot)
                     new_bot = BotDB().bt_bot(new_bot, Haas().read_ticks())
-                    BotDB().setup_bot_from_csv(new_bot,bt_results.iloc[c])
+                    BotDB().setup_bot_from_csv(new_bot, bt_results.iloc[c])
+
     def bot_selector(self):
-        # botlist = [{'guid':i.guid,'name':i.name,'roi':i.roi} for i in MadHatterBot().return_botlist()]
-        botlist = [{'value':i.guid,'name':f"{i.name},'Orders:'{len(i.completedOrders)},'Roi: ',{i.roi}\n\n"} for i in MadHatterBot().return_botlist()]
-        question = {
-                'type': 'list',
-                'name': 'bot',
-                'message': 'Please Select bot from list: ',
-                'choices': botlist
-            }
-        selection = prompt(question)
+        botlist = [{'value': i.guid, 'name': f"{i.name},'Orders:'{len(i.completedOrders)},'Roi: ',{i.roi}\n\n"} for i in MadHatterBot(
+        ).return_botlist()]
+        question = [inquirer.Checkbox(
+            'bots', message='Select one or more bots using spacebar and then press return', choices=botlist)]
+        selection = inquirer.prompt(question)
         for b in MadHatterBot().return_botlist():
-            if selection['bot'] == b.guid:
+            if selection['bots'] == b.guid:
                 self.bot = b
         return self.bot
+
     def multiple_bot_sellector(self):
         print('BB')
         bots = MadHatterBot().return_botlist()
-        b2 = [(f'{i.name} {i.priceMarket.primaryCurrency}-{i.priceMarket.secondaryCurrency}, {i.roi}', i) for i in bots]
+        b2 = [(f'{i.name} {i.priceMarket.primaryCurrency}-{i.priceMarket.secondaryCurrency}, {i.roi}', i)
+              for i in bots]
         print('BB')
-        question = [inquirer.Checkbox('bots',message='Select one or more bots using spacebar and then press return',choices = b2)]
+        question = [inquirer.Checkbox(
+            'bots', message='Select one or more bots using spacebar and then press return', choices=b2)]
         selection = inquirer.prompt(question)
         try:
             self.bot = selection['bots']
@@ -546,20 +556,18 @@ class Main_Menu(Haas):
             self.multiple_bot_sellector()
         return selection['bots']
 
-    def file_selector(self):
-        files = BotDB().get_csv_files()
+    def file_selector(self, path='.'):
+        files = BotDB().get_csv_files(path)
         # print(files[0:5])
-        question ={
-                'type': 'list',
-                'name': 'file',
-                'message': 'Please Select file from list: ',
-                'choices': [i for i in files]
-            }
-        selection = prompt(question)
+        question = [inquirer.List('file',
+                                  'Please Select file from list: ',
+                                  [i for i in files])]
+
+        selection = inquirer.prompt(question)
         self.file = selection['file']
         self.configs = BotDB().read_csv(self.file)
         return self.file
-   
+
 
 class MadHatterBot(Bot):
 
@@ -581,7 +589,7 @@ class MadHatterBot(Bot):
     def return_botlist(self):
         bl = self.c.customBotApi.get_all_custom_bots().result
         botlist = [x for x in bl if x.botType == 15]
-     
+
         return botlist
 
     def make_bot_from_bot_config(self, config, name):
@@ -619,14 +627,12 @@ class MadHatterBot(Bot):
             "macdsign": str(bot.macd["MacdSign"]),
             "trades": int(len(bot.completedOrders))
         }
-            # "pricesource": EnumPriceSource(bot.priceMarket.priceSource).name,
-            # "primarycoin": bot.priceMarket.primaryCurrency,
-            # "secondarycoin": bot.priceMarket.secondaryCurrency,
+        # "pricesource": EnumPriceSource(bot.priceMarket.priceSource).name,
+        # "primarycoin": bot.priceMarket.primaryCurrency,
+        # "secondarycoin": bot.priceMarket.secondaryCurrency,
         df = pd.DataFrame.from_dict([botdict])
-        
-        return df
 
-    
+        return df
 
     def mad_hatter_base_parameters(self):
         ranges = {}
@@ -724,115 +730,126 @@ class MadHatterBot(Bot):
             # yeid
     def return_bot(self, guid):
         bot = self.c.customBotApi.get_custom_bot(
-        guid, EnumCustomBotType.MAD_HATTER_BOT).result
+            guid, EnumCustomBotType.MAD_HATTER_BOT).result
         return bot
+
+
 class ScalperBotClass(Bot):
     def __init__(self):
         Bot.__init__(self)
         self.ticks = Haas().read_ticks()
-    def  return_scalper_bots(self):
-    
+
+    def return_scalper_bots(self):
+
         bl = self.c.customBotApi.get_all_custom_bots().result
         botlist = [x for x in bl if x.botType == 3]
         return botlist
 
     def bot_selector(self):
         bots = self.return_scalper_bots()
-        b2 = [(f'{i.name} {i.priceMarket.primaryCurrency}-{i.priceMarket.secondaryCurrency}, {i.roi}', i) for i in bots]
-        question = [inquirer.Checkbox('bots',message='Select one or more bots using spacebar and then press return',choices = b2)]
+        b2 = [(f'{i.name} {i.priceMarket.primaryCurrency}-{i.priceMarket.secondaryCurrency}, {i.roi}', i)
+              for i in bots]
+        question = [inquirer.Checkbox(
+            'bots', message='Select one or more bots using spacebar and then press return', choices=b2)]
         selection = inquirer.prompt(question)
         try:
             self.bot = selection['bots']
         except TypeError:
             print('No bot has been selected, you must select one')
             self.bot_selector()
-        return selection['bots']    
+        return selection['bots']
+
     def markets_selector(self):
-        
+
         markets = self.c.marketDataApi.get_all_price_markets().result
-        m2 = [(f'{EnumPriceSource(i.priceSource).name},{i.primaryCurrency}-{i.secondaryCurrency}',i) for i in markets]
-     
-        question = [inquirer.Checkbox('markets',message="Select markets",choices=m2)]
-     
+        m2 = [(f'{EnumPriceSource(i.priceSource).name},{i.primaryCurrency}-{i.secondaryCurrency}', i)
+              for i in markets]
+
+        question = [inquirer.Checkbox(
+            'markets', message="Select markets", choices=m2)]
+
         selection = inquirer.prompt(question)
         self.markets = selection['markets']
         # print(selection)
         return selection
 
-    def setup_scalper_bot(self,bot,targetpercentage,safetythreshold):
+    def setup_scalper_bot(self, bot, targetpercentage, safetythreshold):
 
-        do = self.c.customBotApi.setup_scalper_bot(accountguid= bot.accountId,botguid=bot.guid,botname=bot.name,primarycoin=bot.priceMarket.primaryCurrency,secondarycoin=bot.priceMarket.secondaryCurrency, templateguid=bot.customTemplate,contractname=bot.priceMarket.contractName,leverage= bot.leverage, amountType=bot.amountType,tradeamount= bot.currentTradeAmount, position = bot.coinPosition, fee=bot.currentFeePercentage, targetpercentage=targetpercentage,safetythreshold=safetythreshold)
-        print('result: ',do.errorCode, do.errorMessage)
+        do = self.c.customBotApi.setup_scalper_bot(accountguid=bot.accountId, botguid=bot.guid, botname=bot.name, primarycoin=bot.priceMarket.primaryCurrency, secondarycoin=bot.priceMarket.secondaryCurrency, templateguid=bot.customTemplate,
+                                                   contractname=bot.priceMarket.contractName, leverage=bot.leverage, amountType=bot.amountType, tradeamount=bot.currentTradeAmount, position=bot.coinPosition, fee=bot.currentFeePercentage, targetpercentage=targetpercentage, safetythreshold=safetythreshold)
+        print('result: ', do.errorCode, do.errorMessage)
         return do.result
-    
+
     def set_targetpercentage_range(self):
-        start_input = [inquirer.Text('start',message='Define start of the target percentage range',default=0.5)]
-        end_input = [inquirer.Text('end',message='Define end of the target percentage range',default=1.5)]
-        step_input = [inquirer.Text('step',message='Define number of steps between start and end',default=0.2)]
+        start_input = [inquirer.Text(
+            'start', message='Define start of the target percentage range', default=0.5)]
+        end_input = [inquirer.Text(
+            'end', message='Define end of the target percentage range', default=1.5)]
+        step_input = [inquirer.Text(
+            'step', message='Define number of steps between start and end', default=0.2)]
 
         start = inquirer.prompt(start_input)['start']
         end = inquirer.prompt(end_input)['end']
         step = inquirer.prompt(step_input)['step']
-        self.targetpercentage = [start,end,step]
+        self.targetpercentage = [start, end, step]
 
-    
     def set_safetythreshold_range(self):
-        start_input = [inquirer.Text('start',message='Define start of the safety threshold range',default=97)]
-        end_input = [inquirer.Text('end',message='Define end of the safety threshold range',default=98)]
-        step_input = [inquirer.Text('step',message='Define number of steps between start and end',default=0.2)]
+        start_input = [inquirer.Text(
+            'start', message='Define start of the safety threshold range', default=1)]
+        end_input = [inquirer.Text(
+            'end', message='Define end of the safety threshold range', default=5)]
+        step_input = [inquirer.Text(
+            'step', message='Define number of steps between start and end', default=0.2)]
 
         start = inquirer.prompt(start_input)['start']
         end = inquirer.prompt(end_input)['end']
         step = inquirer.prompt(step_input)['step']
-        self.safetythreshold = [start,end,step]
-    
+        self.safetythreshold = [start, end, step]
+
     def backtest(self):
-        # def to_df(results):
-        #     configs = pd.DataFrame(results,columns=['roi','safetythreshold','targetpercentage'])
-        #     configs.drop_duplicates()
-        #     configs.sort_values(by='roi', ascending=False)
-        #     configs.reset_index(inplace=True,drop=True)
-        #     return configs
-       
-        
-        if len(self.bot)>0:
-           with alive_bar(len(self.bot)) as bar: 
-            for bot in self.bot:
+ 
+        if len(self.bot) > 0:
+            with alive_bar(len(self.bot)) as bar:
+                for bot in self.bot:
 
-                results = []
-                columns = ['roi','safetythreshold','targetpercentage']
-                
-                for s in tqdm(np.arange(float(self.safetythreshold[0]),float(self.safetythreshold[1]),float(self.safetythreshold[2]))):
+                    results = []
+                    columns = ['roi', 'safetythreshold', 'targetpercentage']
 
+                    for s in tqdm(np.arange(float(self.safetythreshold[0]), float(self.safetythreshold[1]), float(self.safetythreshold[2]))):
 
-                    for t in tqdm(np.arange(float(self.targetpercentage[0]),float(self.targetpercentage[1]),float(self.targetpercentage[2]))):
+                        for t in tqdm(np.arange(float(self.targetpercentage[0]), float(self.targetpercentage[1]), float(self.targetpercentage[2]))):
 
-                        self.setup_scalper_bot(bot,targetpercentage=round(t,2),safetythreshold=round(s,2))
-                        
-                        bt_result = self.c.customBotApi.backtest_custom_bot(bot.guid, self.ticks)
-                        bt_result = bt_result.result
-                        print('ROI: ',bt_result.roi, round(t,2))
-                        total_results = {'roi':bt_result.roi,'targetpercentage':round(t,2),'safetythreshold':round(s,2)}
-                  
-                       
-                        # results.append(total_results)
-                        results.append([bt_result.roi,round(t,2),round(s,2)])
-                df_res = pd.DataFrame(results, columns=columns, index=range(len(results)))
-                df_res.sort_values(by='roi', ascending=False, inplace=True)
-                df_res.reset_index(inplace=True,drop=True)
-                print(df_res)
-                self.setup_scalper_bot(bot,df_res.safetythreshold.iloc[0],df_res.targetpercentage.iloc[0])
-                self.c.customBotApi.backtest_custom_bot(bot.guid, self.ticks)
-                
-            
+                            self.setup_scalper_bot(bot, targetpercentage=round(
+                                t, 2), safetythreshold=round(s, 2))
+
+                            bt_result = self.c.customBotApi.backtest_custom_bot(
+                                bot.guid, self.ticks)
+                            bt_result = bt_result.result
+                            print('ROI: ', bt_result.roi, round(t, 2))
+                            total_results = {'roi': bt_result.roi, 'targetpercentage': round(
+                                t, 2), 'safetythreshold': round(s, 2)}
+
+                            # results.append(total_results)
+                            results.append(
+                                [bt_result.roi, round(t, 2), round(s, 2)])
+                    df_res = pd.DataFrame(
+                        results, columns=columns, index=range(len(results)))
+                    df_res.sort_values(by='roi', ascending=False, inplace=True)
+                    df_res.reset_index(inplace=True, drop=True)
+                    print(df_res)
+                    self.setup_scalper_bot(
+                        bot, df_res.safetythreshold.iloc[0], df_res.targetpercentage.iloc[0])
+                    self.c.customBotApi.backtest_custom_bot(
+                        bot.guid, self.ticks)
 
         else:
             self.bot_selector()
 
     def scalper_bot_menu(self):
-        # choices = 
-        menu = [inquirer.List('response',message='Please chose an action:',choices=['Select bots','Set range for safety threshold','Set range for target percentage','Backtest','Main menu'])]
-        
+        # choices =
+        menu = [inquirer.List('response', message='Please chose an action:', choices=[
+                              'Select bots', 'Set range for safety threshold', 'Set range for target percentage', 'Backtest', 'Main menu'])]
+
         while True:
             user_response = inquirer.prompt(menu)['response']
             if user_response == 'Select bots':
@@ -846,7 +863,6 @@ class ScalperBotClass(Bot):
             elif user_response == 'Main menu':
                 break
 
-        
 
 class TradeBot(Bot):
 
@@ -856,7 +872,8 @@ class TradeBot(Bot):
     def return_bot(self, guid):
         bot = self.c.tradeBotApi.get_trade_bot(guid).result
         return bot
-    def get_indicators(self,bot):
+
+    def get_indicators(self, bot):
         '''
         returns all tradebot indicators as a list
         '''
@@ -864,7 +881,7 @@ class TradeBot(Bot):
         idd = list([bot.indicators[x] for x in bot.indicators])
         return idd
 
-    def select_indicator(self,indicators):
+    def select_indicator(self, indicators):
 
         for i, b in enumerate(indicators):
             print(i, indicators[i].indicatorTypeFullName)
@@ -873,19 +890,21 @@ class TradeBot(Bot):
         indicator = indicators[int(uip)]
         print('select indicator', indicator)
         return indicator
-    def setup_indicator(self,bot,indicator):
+
+    def setup_indicator(self, bot, indicator):
         setup = self.c.TradeBotApi.setup_indicator(bot.guid, indicator.guid,
-                                       bot.priceMarket, bot.priceMarket.primaryCurrency, bot.priceMarket.secondaryCurrency, bot.priceMarket.contractName, indicator.timer, indicator.chartType, indicator.deviation)
-        print(f'Indicator setup was a {setup.errorCode.value}, {setup.errorMessage.value}')
+                                                   bot.priceMarket, bot.priceMarket.primaryCurrency, bot.priceMarket.secondaryCurrency, bot.priceMarket.contractName, indicator.timer, indicator.chartType, indicator.deviation)
+        print(
+            f'Indicator setup was a {setup.errorCode.value}, {setup.errorMessage.value}')
+
     def get_interfaces(self, bot, indicator):
 
         interfaces = []
         for interface in bot.indicators[indicator.guid].indicatorInterface:
-            interfaces.append({'title': interface.title, 'value': interface.value, 'options': interface.options, 'step': interface.step})
+            interfaces.append({'title': interface.title, 'value': interface.value,
+                               'options': interface.options, 'step': interface.step})
 
         return interfaces
-
-
 
     def get_full_interfaces(self, bot, indicator):
         interfaces = {}
@@ -893,9 +912,8 @@ class TradeBot(Bot):
             interfaces[EnumIndicator(
                 bot.indicators[indicator.guid].indicatorType).name] = self.dict_from_class(interface)
 
-
-
         return interfaces
+
     def get_enums_for_indicators(self, bot):
         icc = ic()
         indicators_enums = {}
@@ -905,21 +923,21 @@ class TradeBot(Bot):
             indicators.append(indicator_enum)
         return indicators_enums
 
-
         return indicators
+
     def add_indicator(self, bot, indicator):
         failed = []
         try:
             add = self.c.tradeBotApi.add_indicator(bot.guid, indicator)
             if add.result:
-                print('Indicator', EnumIndicator(indicator).name, ' added to ', bot.name)
+                print('Indicator', EnumIndicator(
+                    indicator).name, ' added to ', bot.name)
             else:
                 print('Adding indicator didn\'t work out')
 
         except:
             failed.append(indicator)
         return failed
-
 
     def edit_indicator(self, bot, indicator, field, value):
         print(indicator)
@@ -933,7 +951,8 @@ class TradeBot(Bot):
         try:
             add = self.c.tradeBotApi.remove_indicator(bot.guid, indicator.guid)
             if add.result:
-                print('Indicator', EnumIndicator(indicator).value, ' removed from ', bot.name)
+                print('Indicator', EnumIndicator(
+                    indicator).value, ' removed from ', bot.name)
             else:
                 print('Removing indicator didn\'t work out')
 
@@ -945,61 +964,34 @@ class TradeBot(Bot):
         for x in indicator_list:
             self.remove_indicator(bot, x)
 
-
     def add_multiple_indicators(self, bot, indicators):
         for x in indicators:
             self.add_indicator(bot, x)
 
-    def add_all_indicators(self,bot):
+    def add_all_indicators(self, bot):
         indicators = [x for x in range(71)]
-        self.add_multiple_indicators(bot,indicators)
+        self.add_multiple_indicators(bot, indicators)
 
-    def remove_all_indicators(self,bot):
+    def remove_all_indicators(self, bot):
         indicators = t.get_indicators(bot)
         self.remove_indicators(bot, indicators)
 
-    def select_bot_get_indicator(self,bot):
+    def select_bot_get_indicator(self, bot):
         indicators = self.get_indicators(bot)
         indicator = self.select_indicator(indicators)
         return indicator
 
+
 class MarketData(Haas):
     def __init__(self):
         Haas.__init__(self)
-        # self.bt_db = sqllite_memory = sqllite.client("market.db")
 
-    def get_ticks(self,pricesource, primarycoin, secondarycoin,interval,tickstype):
-
-        '''
-        Get price history in required tick intervals from Haaas online market data interface.
-        tickstype can be LASTTICKS or DEEPTICKS
-        result = dataframe with date_time index, Open(O), Close(C) High(H), Low(L),Buy(B), Sell(S), Volume(V), Unixtime(T) tables
-        '''
-
-        url = f'https://hcdn.haasonline.com/PriceAPI.php?channel={tickstype}&market={pricesource}_{primarycoin}_{secondarycoin}_&interval={interval}'
-
-        with requests.sessions.Session() as s:
-            resp = s.get(url)
-            data_dict = resp.json().get('Data')
-            # print(data_dict)
-            index = []
-            for d in data_dict:
-                    index.append(pd.to_datetime(d['T'], unit='s'))
-
-            df = pd.DataFrame(data_dict, index=index)
-            df = df.rename(columns={'O':'open','C':'close','L':'low','H':'high','V':'volume'})
-            # print(df)
-            print(df)
-            return df
-
-    def empty_market_data_df(self):
-        market_history = {'date': '', 'open':'','high':'','low':'', 'close':'','buy':'', 'sell':'', 'volume':''}
-        df = pd.DataFrame(market_history,index=([""]))
-        return df
 
     def to_df_for_ta(self, market_history):
-
-        market_data = [ 
+        '''
+        Transforms List of Haas MarketData into Dataframe
+        '''
+        market_data = [
             {
 
                 "Date": x.unixTimeStamp,
@@ -1017,7 +1009,7 @@ class MarketData(Haas):
         df = pd.DataFrame(market_data)
 
         try:
-            df['Date'] = pd.to_datetime(df['Date'], unit = 's')
+            df['Date'] = pd.to_datetime(df['Date'], unit='s')
 
         except:
             print('Whops')
@@ -1025,123 +1017,109 @@ class MarketData(Haas):
         return df
 
     def get_all_markets(self):
-
+        '''
+        Returns dataframe with "primarycurrency", "secondarycurrency",'pricesource','marketobj','Ticker'
+        Ticker is primarycurrency, secondarycurrency in one word
+        '''
         markets = [
             (
-                EnumPriceSource(i.priceSource).name,
+
                 i.primaryCurrency,
                 i.secondaryCurrency,
-                i,
+                i.priceSource,
+                i
+
             )
             for i in self.c.marketDataApi.get_all_price_markets().result
         ]
-
         df = pd.DataFrame(
             markets,
-            columns=(["pricesource", "primarycurrency",
-                            "secondarycurrency", "obj"]
-        ))
+            columns=(["primarycurrency",
+                      "secondarycurrency", 'pricesource', 'marketobj']))
+        df.drop_duplicates(inplace=True, ignore_index=True)
+        df['Ticker'] = df.primarycurrency.values+df.secondarycurrency.values
         return df
 
-    def return_priceMarket_object(self,  pricesource, primarycoin, secondarycoin):
-        # print(pricesource, primarycoin, secondarycoin)
+    def return_priceMarket_object(self, pricesource: EnumPriceSource, primarycoin=None, secondarycoin=None, ticker=None):
+        '''
+            Works in one of two ways: 
+            1. pricesource,primarycoin,secondarycoin = marketobject
+            2. pricesource, ticker = marketobject
+        '''
+
         df = self.get_all_markets()
-        '''
-            Returns priceSource object for given pricesorce, primarycoin, secondarycoin if that pricesource is enabled in Haas.
-        '''
 
-        obj = df[df["pricesource"] == pricesource][df["primarycurrency"]
-                                             == primarycoin][df["secondarycurrency"] == secondarycoin]
-        # print('Market obj',obj.obj[0]__dict__)
-        # print('obj1', obj[0][3])
-        # print('obj', obj.obj.values[0].__dict__)
-        # print(type(obj.obj.values[0]))
-        return obj.obj.values[0]
-    def db_table(self):
-
-        db_tables = {}
-        market_data_cols = ['dt', 'open', 'close', 'volume', 'buy', 'sell']
-        indicator_cols = ['dt', 'val1','val2','val3']
+        if ticker != None:
+            marketobj = df[df['Ticker'] == ticker][df['pricesource']
+                                                   == pricesource].marketobj.values[0]
+            return marketobj
+        else:
+            marketobj = df[df["pricesource"] == pricesource][df["primarycurrency"]
+                                                             == primarycoin][df["secondarycurrency"] == secondarycoin].marketobj.values[0]
+            return marketobj
 
     # @sleep_and_retry
     # @limits(calls=5, period=15)
     def get_market_data(self, priceMarketObject, interval, depth):
-            marketdata = self.c.marketDataApi.get_history_from_market(
+        '''
+        Returns dataframe full of candlestick data including volume in any interval and depth supported by Haasonline.
+
+        '''
+        marketdata = self.c.marketDataApi.get_history_from_market(
             priceMarketObject, interval, depth)
-            # print(type(marketdata.result))
-            print('get_market_data','errorcode',marketdata.errorCode,'errormessage', marketdata.errorMessage)
-            if marketdata.errorCode == EnumErrorCode.SUCCESS:
-                
-                if type(marketdata.result) == list:
-                    if len(marketdata.result) > 0:
-                        # print('len',len(marketdata.result))
-                        df = self.to_df_for_ta(marketdata.result)
-                        return df
-                    else:
-                        time.sleep(5)
-                        return self.get_market_data(priceMarketObject,interval,depth)
+        print('get_market_data', 'errorcode', marketdata.errorCode,
+              'errormessage', marketdata.errorMessage)
+        if marketdata.errorCode == EnumErrorCode.SUCCESS:
+
+            if type(marketdata.result) == list:
+                if len(marketdata.result) > 0:
+                    df = self.to_df_for_ta(marketdata.result)
+                    return df
                 else:
-                    time.sleep(10)
-                    return self.get_market_data(priceMarketObject,interval,depth)
+                    time.sleep(5)
+                    return self.get_market_data(priceMarketObject, interval, depth)
             else:
                 time.sleep(10)
-                return self.get_market_data(priceMarketObject,interval,depth)
-            
-            # elif marketdata.errorCode == EnumErrorCode.PRICE_MARKET_IS_SYNCING:
-            #     for i in range(10):
-            #         time.sleep(5)
-            #         self.get_market_data(priceMarketObject,interval,depth)
-                   
-           
+                return self.get_market_data(priceMarketObject, interval, depth)
+        else:
+            time.sleep(10)
+            return self.get_market_data(priceMarketObject, interval, depth)
+
 
     def save_market_data_to_csv(self, marketData, marketobj):
+        '''
+        Saves provided MarketData dataframe to CSV file in a name format provided below
+        '''
         filename = f'{EnumPriceSource(marketobj.priceSource).name}-{marketobj.primaryCurrency}-{marketobj.secondaryCurrency}-{len(marketData)}.csv'
-        if len(marketData)>0:
+        if len(marketData) > 0:
             marketData.to_csv(f'./market_data/{filename}')
             print(f'{EnumPriceSource(marketobj.priceSource).name} | {marketobj.primaryCurrency} | {marketobj.secondaryCurrency} sucessfuly saved to csv')
             return f"sucessfully saved {filename} to market_data folder, with {len(marketData)} ticks included"
         else:
             return f"Market Data is empty. {filename} has not been saved."
-    def read_csv(self,file,nrows=None):
-        data = BotDB().read_csv(file,nrows=nrows)
+
+    def read_csv(self, file, nrows=None):
+        '''
+        Reads MarketData csv file into a dataframe
+        '''
+        data = BotDB().read_csv(file, nrows=nrows)
         def uppercase(x): return str(x).capitalize()
         data.rename(uppercase, axis='columns', inplace=True)
         data['Data'] = pd.to_datetime(data['Data'])
         dti = pd.DatetimeIndex([x for x in data['Date']])
         data.set_index(dti, inplace=True)
         print(data)
-        # data['Date'] = pd.to_datetime(data['timestamp'])
         return data
-
-
-    def stream_orderbook(self, pricemarketObject):
-        request = self.c.marketDataApi.get_order_book_from_market(pricemarketObject)
-        orderbook = request.result
-        return orderbook
-
-    def all_markets_orderbook(self, pricemarketobjlist):
-        for i in pricemarketobjlist['obj']:
-
-            orderbook = self.stream_orderbook(i)
-            pricemarketobjlist['orderbook'] = orderbook
-            # print(orderbook.__dict__)
-
-        return pricemarketobjlist
-    def calculate_expected_roi(self, market_data):
-        diff = market_data.max()-market_data.min()
-        expected = diff/market_data.max()*100
-        print(f'expected roi: {expected}')
-    def all_markets_to_object(self):
-        pricemarketobjlist = []
-        for i in self.get_all_markets().index:
-            mard = self.get_all_markets().loc[i]
-            priceobj = self.return_priceMarket_object(mard.pricesource, mard.primarycurrency, mard.secondarycurrency)
-            pricemarketobjlist.append(priceobj)
-        return pricemarketobjlist
 
         """
         Below are DASH recepies for market related data
         """
+
+class HaasDash(MarketData):
+
+    def __init__(self):
+        MarketData.__init__(self)
+
     def markets_dropdown(self):
 
         markets = self.get_all_markets()
@@ -1149,8 +1127,7 @@ class MarketData(Haas):
             x)} for x in markets.pricesource.unique()]
         return markets_dropdown
 
-
-    def primarycoin_dropdown(self, pricesource,):
+    def primarycoin_dropdown(self, pricesource):
 
         df = self.get_all_markets()
         pairs = df[df["pricesource"] == pricesource]
@@ -1161,13 +1138,11 @@ class MarketData(Haas):
 
         df = self.get_all_markets()
         df = self.get_all_markets()
-        pairs = df[df["pricesource"] == pricesource][df['primarycurrency'] == primarycurrency]
+        pairs = df[df["pricesource"] ==
+                   pricesource][df['primarycurrency'] == primarycurrency]
         return pairs.secondarycurrency.unique()
 
-    def get_last_minute_ticker(self, marketobj):
-        ticker = self.c.marketDataApi.get_minute_price_ticker_from_market(marketobj)
-        df = self.to_df_for_ta(ticker.result)
-        return df
+
 
 class InteractiveBT(Bot):
     def __init__(self):
@@ -1176,7 +1151,7 @@ class InteractiveBT(Bot):
                                'Length', 'Devup', 'Devdn', 'MaType', 'Deviation', 'ResetMid', 'AllowMidSell', 'RequireFcc', 'Interval']
         self.indicators = ['rsi', 'bBands', 'macd']
         self.interval = ['Interval', 'interval']
-        self.ticks =  Haas().read_ticks()
+        self.ticks = Haas().read_ticks()
         # self.B =  BotDB()
 
     @sleep_and_retry
@@ -1264,7 +1239,7 @@ class InteractiveBT(Bot):
         from collections import defaultdict
         d = defaultdict(tuple)
         for tup in important_indicators:
-            d[tup[0]] += (tup[1],)
+            d[tup[0]] += (tup[1])
 
         with_diff = defaultdict(tuple)
         try:
@@ -1303,20 +1278,22 @@ class InteractiveBT(Bot):
             print(bt.errorCode, bt.errorMessage, 'else')
             return bt.result
 
-    def backtest(self,loop_count =1):
+    def backtest(self, loop_count=1):
         def to_df(sat):
             df = pd.DataFrame(sat)
             df.reset_index()
-                
+
             dfs = []
             for i in sat:
                 config = MadHatterBot().bot_config(i)
                 dfs.append(config)
-               
+
             configs = pd.concat(dfs)
             configs.drop_duplicates()
-            filename = str(bot.name.replace('/','_'))+str("_")+str(datetime.date.today().month)+str('-')+str(datetime.date.today().day)+str("_")+str(len(configs))+str('.csv')
-            
+            filename = str(bot.name.replace('/', '_'))+str("_")+str(datetime.date.today().month) + \
+                str('-')+str(datetime.date.today().day) + \
+                str("_")+str(len(configs))+str('.csv')
+
             configs.to_csv(filename)
             # print(f'Results are saved to {filename}.csv')
             # df.to_json(f'{filename}.json')
@@ -1350,14 +1327,15 @@ class InteractiveBT(Bot):
             print('SAME_ROI Loop Count: ', loops)
             print('AutoBT will stop on SAME_ROI Loop Count: ', loop_count)
             print('Best Config: ')
-            best_config =  MadHatterBot().bot_config(sorted(
+            best_config = MadHatterBot().bot_config(sorted(
                 sat, key=lambda x: x.roi, reverse=True)[0])
             print(best_config)
             if loops == int(loop_count):
                 df = to_df(sat)
                 break
+
     def load_results(self):
-        
+
         files = self.B.get_csv_files()
         file = self.B.select_from_list(files)
         db = self.B.read_csv(file)
@@ -1377,18 +1355,21 @@ class InteractiveBT(Bot):
         else:
             print('Bot has not been configured due to some Error')
         return result
+
     def print_user_message(self):
 
         print("")
         print('InteractiveBT, or AssistedBT implies that you are manually changing bot parameters while backtesting is triggered automatically at a given interval or by a bot parameter change')
         print('Every BT session, is saved on your drive. Session ends if the ROI of the last 10 backtests was exactly the same. Every config from it can be applied to any other MH bot afterwards')
         print('Open any Mad-Hatter bot in FULL SCREEN, open BOT REMOTE to instantly see backtestin results, navigate to indicators tab, click on any parameter value. Now, with keyaboard arrow keys change the value up and down.')
-        print('TAB and SHIFT+TAB keys, provide you with immense speed of indicators navigation!') 
+        print('TAB and SHIFT+TAB keys, provide you with immense speed of indicators navigation!')
         print('As long as typing coursor able to edit indicator values now, pressing TAB will move it to the next numeric parameter above. SHIFT+TAB moves it down.')
         print('Parameters with options like MA type are skipped.')
-        print('bBands deviations have to be changed by quickly writing values down by numbers')
+        print(
+            'bBands deviations have to be changed by quickly writing values down by numbers')
         print('To begin the process, simply chose Mad-Hatter Bot and change a few params here and there with the above written method!')
         print('Waiting for any MH bot parameter to change')
+
 
 class BotDB:
     def __init__(self):
@@ -1404,13 +1385,14 @@ class BotDB:
 
         return files
 
-    def get_csv_files(self):
+    def get_csv_files(self, path='./'):
         files = []
-        for file in os.listdir('./'):
+        for file in os.listdir(path):
             # if file.endswith(".csv") or file.endswith('.json'):
             if file.endswith(".csv"):
-                files.append(os.path.join('./', file))
+                files.append(os.path.join(path, file))
         return files
+
     def select_from_list(self, files):
         for i, file in enumerate(files):
             print(i, file)
@@ -1425,7 +1407,7 @@ class BotDB:
                 configs = pd.read_csv(file)
                 # print(configs[0])
             except Exception as e:
-                print('csv',e)
+                print('csv', e)
             return configs
         else:
             return 'csv was not read'
@@ -1509,7 +1491,7 @@ class BotDB:
                 bot.guid,
                 EnumMadHatterIndicators.RSI,
                 2,
-                config['rsis'],)
+                config['rsis'])
 
         if bot.macd["MacdFast"] != config['macdfast']:
             do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
@@ -1537,7 +1519,6 @@ class BotDB:
 
     # calling it setup_bot_from_obj. It checks each parameter against new config.
     def setup_bot_from_obj(self, bot, config):
-
 
         if bot.bBands["Length"] != config.bBands['Length']:
             do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
@@ -1608,7 +1589,7 @@ class BotDB:
                 bot.guid,
                 EnumMadHatterIndicators.RSI,
                 2,
-                config.rsi['RsiOversold'],)
+                config.rsi['RsiOversold'])
 
         if bot.macd["MacdFast"] != config.macd['MacdFast']:
             do = self.c.customBotApi.set_mad_hatter_indicator_parameter(
@@ -1652,10 +1633,10 @@ class BotDB:
                 interval=config.interval,
                 includeIncompleteInterval=bot.includeIncompleteInterval,
                 mappedBuySignal=bot.mappedBuySignal,
-                mappedSellSignal=bot.mappedSellSignal,).result
+                mappedSellSignal=bot.mappedSellSignal).result
 
         print(bot.name, ' Has been configured')
-            #Indicator parameters have been set
+        # Indicator parameters have been set
 
         if bot.interval != config.interval:
             setup_bot_from_obj = self.c.customBotApi.setup_mad_hatter_bot(  # This code sets time interval as main goalj
@@ -1676,7 +1657,7 @@ class BotDB:
                 interval=config.interval,
                 includeIncompleteInterval=bot.includeIncompleteInterval,
                 mappedBuySignal=bot.mappedBuySignal,
-                mappedSellSignal=bot.mappedSellSignal,).result
+                mappedSellSignal=bot.mappedSellSignal).result
 
         print(bot.name, ' Has been configured')
 
@@ -1694,30 +1675,33 @@ class BotDB:
         best_roi = 0
         configs.roi[0:-1] = 0
         cols = ['interval', 'signalconsensus', 'fcc', 'resetmiddle',
-             'allowmidsells', 'matype', 'rsil', 'rsib', 'rsis', 'bbl', 'devup',
-             'devdn', 'macdfast', 'macdslow', 'macdsign', 'trades', 'roi']
+                'allowmidsells', 'matype', 'rsil', 'rsib', 'rsis', 'bbl', 'devup',
+                'devdn', 'macdfast', 'macdslow', 'macdsign', 'trades', 'roi']
         for c in configs.columns:
             if c not in cols:
-                configs.drop(c,axis=1,inplace=True)
-        markets = self.c.marketDataApi.get_price_markets(bot.priceMarket.priceSource).result
+                configs.drop(c, axis=1, inplace=True)
+        markets = self.c.marketDataApi.get_price_markets(
+            bot.priceMarket.priceSource).result
         for market in markets:
             if market.primaryCurrency == bot.priceMarket.primaryCurrency:
                 if market.secondaryCurrency == bot.priceMarket.secondaryCurrency:
-                    if bot.currentTradeAmount< market.minimumTradeAmount:
+                    if bot.currentTradeAmount < market.minimumTradeAmount:
                         bot.currentTradeAmount = market.minimumTradeAmount
-        with alive_bar(len(configs.index), title = f"{bot.name} backtesting. ") as bar:
-           
+        with alive_bar(len(configs.index), title=f"{bot.name} backtesting. ") as bar:
+
             for i in configs.index:
-                try:
-                    print('Current Backtest ROI: ', bt.roi,'%','best ROI:', best_roi,'%')
-                    print('\nTop 5 configs so far:\n')
-                    print(configs.sort_values(by='roi', ascending=False)[0:5])
-                    
-                except:
-                    pass            
-                
+
+                print('Current Backtest ROI: ', bt.roi,
+                      '%', 'best ROI:', best_roi, '%')
+                print('\nTop 5 configs so far:\n')
+                print(configs.sort_values(by='roi', ascending=False)[0:5])
+
                 config = configs.iloc[i]
-                self.setup_bot_from_csv(bot, config)
+                s = self.setup_bot_from_csv(bot, config)
+                try:
+                    print(s.errorCode)
+                except Exception as e:
+                    print(e)
                 bt = self.c.customBotApi.backtest_custom_bot_on_market(
                     bot.accountId,
                     bot.guid,
@@ -1725,30 +1709,32 @@ class BotDB:
                     bot.priceMarket.primaryCurrency,
                     bot.priceMarket.secondaryCurrency,
                     bot.priceMarket.contractName).result
+                try:
+                    print(bt.errorCode)
+                except Exception as e:
+                    print(e)
                 if bt.roi > best_roi:
                     best_roi = bt.roi
                 configs['roi'][i] = bt.roi
-                
-                
-                
-                bar()
-                os.system('clear')
 
-                
-            return configs
+                bar()
+
+        return configs
 
     def verify_cfg(self):
         c = ConfigParser
 
 
 def time_limited_test_menu():
-    if datetime.date.today()< datetime.date(2020,8,24):
+    if datetime.date.today() < datetime.date(2020, 8, 24):
         test_menu()
     else:
         print('Trial has ended. Contact Cosmos directly via twitter or discord for more.')
         time.sleep(120)
         print('Exiting ...')
         time.sleep(5)
+
+
 def test_menu():
     M = Main_Menu()
     a = M.main_screen()
@@ -1759,8 +1745,6 @@ def scalper_test_menu():
     # print(sc)
     s = ScalperBotClass()
     bots = s.scalper_bot_menu()
-
-
 
     # ms = ScalperBotClass().markets_selector()
 if __name__ == "__main__":
