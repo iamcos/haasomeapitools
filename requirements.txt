@@ -1,3 +1,4 @@
+alive_progress
 aiohttp==3.6.2
 alive-progress==1.6.1
 altair==4.1.0
